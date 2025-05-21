@@ -43,8 +43,11 @@ const checkoutSchema = z.object({
   country: z.string().min(2, "Country is required"),
   paymentMethod: z.enum(["credit-card", "paypal", "bank-transfer"]),
   saveInfo: z.boolean().optional(),
-  terms: z.literal(true, {
-    errorMap: () => ({ message: "You must accept the terms and conditions" }),
+  // Fixed the error: the terms field now correctly accepts boolean but is validated to be true
+  terms: z.boolean({
+    required_error: "You must accept the terms and conditions",
+  }).refine(val => val === true, {
+    message: "You must accept the terms and conditions",
   }),
 });
 

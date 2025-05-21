@@ -179,7 +179,8 @@ const ProductsPage = () => {
           max={2000} 
           step={10}
           value={priceRange}
-          onValueChange={setPriceRange}
+          // Fix the TypeScript error by using a properly typed callback
+          onValueChange={(value: [number, number]) => setPriceRange(value)}
           className="mb-2"
         />
         <div className="flex justify-between text-sm">
