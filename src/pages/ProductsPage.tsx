@@ -155,14 +155,14 @@ const ProductsPage = () => {
       <div>
         <h3 className="text-lg font-medium mb-3">Categories</h3>
         <Select
-          value={categoryId || ""}
-          onValueChange={(value) => setCategoryId(value || null)}
+          value={categoryId || "all"}
+          onValueChange={(value) => setCategoryId(value === "all" ? null : value)}
         >
           <SelectTrigger>
             <SelectValue placeholder="All Categories" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Categories</SelectItem>
+            <SelectItem value="all">All Categories</SelectItem>
             {categories.map((category) => (
               <SelectItem key={category.id} value={category.id}>
                 {category.name}
