@@ -1,11 +1,11 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { CartItem, Product } from "@/lib/types";
+import { CartItem, Product, ProductColor } from "@/lib/types";
 import { toast } from "@/components/ui/sonner";
 
 interface CartContextType {
   items: CartItem[];
-  addItem: (product: Product, quantity?: number) => void;
+  addItem: (product: Product, quantity?: number, size?: string, color?: ProductColor) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
@@ -50,25 +50,43 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [items]);
 
-  const addItem = (product: Product, quantity = 1) => {
+  const addItem = (product: Product, quantity = 1, size?: string, color?: ProductColor) => {
     setItems((currentItems) => {
-      const existingItem = currentItems.find(
-        (item) => item.productId === product.id
+      // Find if we have the exact same product with same size and color
+      const existingItemIndex = currentItems.findIndex(
+        (item) => 
+          item.productId === product.id && 
+          item.selectedSize === size && 
+          ((!item.selectedColor && !color) || 
+           (item.selectedColor?.name === color?.name))
       );
 
-      if (existingItem) {
+      if (existingItemIndex !== -1) {
         // Update existing item
-        const updatedItems = currentItems.map((item) =>
-          item.productId === product.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
+        const updatedItems = [...currentItems];
+        updatedItems[existingItemIndex] = {
+          ...updatedItems[existingItemIndex],
+          quantity: updatedItems[existingItemIndex].quantity + quantity
+        };
         toast.success(`Updated ${product.name} quantity in cart`);
         return updatedItems;
       } else {
         // Add new item
-        toast.success(`Added ${product.name} to cart`);
-        return [...currentItems, { productId: product.id, quantity, product }];
+        let itemDetails = `${product.name}`;
+        if (size) itemDetails += ` - Size: ${size}`;
+        if (color) itemDetails += ` - Color: ${color.name}`;
+        
+        toast.success(`Added ${itemDetails} to cart`);
+        return [
+          ...currentItems, 
+          { 
+            productId: product.id, 
+            quantity, 
+            product,
+            selectedSize: size,
+            selectedColor: color
+          }
+        ];
       }
     });
   };

@@ -60,6 +60,36 @@ const ProductCard = ({ product, featured = false, viewMode = "grid" }: ProductCa
             
             <p className="text-gray-500 text-sm mb-3 line-clamp-2">{product.description}</p>
             
+            {/* Color options */}
+            {product.colors && product.colors.length > 0 && (
+              <div className="flex gap-1 mb-3">
+                {product.colors.slice(0, 4).map((color) => (
+                  <div
+                    key={color.name}
+                    className="w-4 h-4 rounded-full border border-gray-300"
+                    style={{ backgroundColor: color.hex }}
+                    title={color.name}
+                  />
+                ))}
+                {product.colors.length > 4 && (
+                  <div className="text-xs text-gray-500">+{product.colors.length - 4} more</div>
+                )}
+              </div>
+            )}
+            
+            {/* Size options */}
+            {product.sizes && product.sizes.length > 0 && (
+              <div className="flex gap-1 mb-3 text-xs text-gray-500">
+                <span>Sizes:</span>
+                {product.sizes.slice(0, 5).map((size, index) => (
+                  <span key={size}>
+                    {size}{index < Math.min(product.sizes?.length || 0, 5) - 1 ? "," : ""}
+                  </span>
+                ))}
+                {(product.sizes?.length || 0) > 5 && <span>...</span>}
+              </div>
+            )}
+            
             <div className="mt-auto flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center">
                 {product.salePrice ? (
@@ -127,6 +157,30 @@ const ProductCard = ({ product, featured = false, viewMode = "grid" }: ProductCa
             <span className="text-sm">{product.rating.toFixed(1)}</span>
           </div>
         </div>
+        
+        {/* Color options */}
+        {product.colors && product.colors.length > 0 && (
+          <div className="flex gap-1 mt-2">
+            {product.colors.slice(0, 4).map((color) => (
+              <div
+                key={color.name}
+                className="w-4 h-4 rounded-full border border-gray-300"
+                style={{ backgroundColor: color.hex }}
+                title={color.name}
+              />
+            ))}
+            {product.colors.length > 4 && (
+              <div className="text-xs text-gray-500">+{product.colors.length - 4}</div>
+            )}
+          </div>
+        )}
+        
+        {/* Size options */}
+        {product.sizes && product.sizes.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1 text-xs text-gray-500">
+            <span>Sizes: {product.sizes.slice(0, 3).join(", ")}{product.sizes.length > 3 ? "..." : ""}</span>
+          </div>
+        )}
         
         <div className="mt-2 flex items-center">
           {product.salePrice ? (

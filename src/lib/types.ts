@@ -1,4 +1,3 @@
-
 export interface Category {
   id: string;
   name: string;
@@ -39,6 +38,13 @@ export interface Product {
   rating: number;
   reviewCount: number;
   slug: string;
+  sizes?: string[];
+  colors?: ProductColor[];
+}
+
+export interface ProductColor {
+  name: string;
+  hex: string;
 }
 
 export interface User {
@@ -52,6 +58,8 @@ export interface CartItem {
   productId: string;
   quantity: number;
   product: Product;
+  selectedSize?: string;
+  selectedColor?: ProductColor;
 }
 
 export interface Order {

@@ -17,12 +17,23 @@ import {
 import { Badge } from "@/components/ui/badge";
 import ProductCard from "@/components/ProductCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ProductColor } from "@/lib/types";
 
 const ProductDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const { addItem } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [selectedSize, setSelectedSize] = useState<string | undefined>(undefined);
+  const [selectedColor, setSelectedColor] = useState<ProductColor | undefined>(undefined);
 
   const product = products.find((p) => p.slug === slug);
 
@@ -42,8 +53,12 @@ const ProductDetail = () => {
   const decrementQuantity = () => setQuantity(q => (q > 1 ? q - 1 : 1));
 
   const handleAddToCart = () => {
-    addItem(product, quantity);
+    addItem(product, quantity, selectedSize, selectedColor);
   };
+
+  // Check if product has sizes or colors
+  const hasSizes = product.sizes && product.sizes.length > 0;
+  const hasColors = product.colors && product.colors.length > 0;
 
   // Get related products (same category, excluding current)
   const relatedProducts = products
@@ -159,6 +174,72 @@ const ProductDetail = () => {
             <p>{product.description}</p>
           </div>
 
+          {/* Color Selection */}
+          {hasColors && (
+            <div className="mb-6">
+              <h3 className="font-medium mb-2">Select Color:</h3>
+              <RadioGroup 
+                value={selectedColor ? selectedColor.name : ""} 
+                onValueChange={(value) => {
+                  const color = product.colors?.find(c => c.name === value);
+                  setSelectedColor(color);
+                }}
+                className="flex flex-wrap gap-3"
+              >
+                {product.colors?.map((color) => (
+                  <div key={color.name} className="flex items-center gap-2">
+                    <RadioGroupItem 
+                      value={color.name} 
+                      id={`color-${color.name}`}
+                      className="sr-only"
+                    />
+                    <label
+                      htmlFor={`color-${color.name}`}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all ${
+                        selectedColor?.name === color.name 
+                          ? "ring-2 ring-offset-2 ring-primary" 
+                          : ""
+                      }`}
+                      style={{ backgroundColor: color.hex }}
+                    >
+                      {selectedColor?.name === color.name && (
+                        <span className={`text-xs ${
+                          isLightColor(color.hex) ? "text-black" : "text-white"
+                        }`}>✓</span>
+                      )}
+                    </label>
+                    <span className="text-sm">{color.name}</span>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
+          )}
+
+          {/* Size Selection */}
+          {hasSizes && (
+            <div className="mb-6">
+              <div className="flex justify-between mb-2">
+                <h3 className="font-medium">Select Size:</h3>
+                <button className="text-sm text-primary">Size Guide</button>
+              </div>
+              <Select
+                value={selectedSize}
+                onValueChange={setSelectedSize}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Choose a size" />
+                </SelectTrigger>
+                <SelectContent>
+                  {product.sizes?.map((size) => (
+                    <SelectItem key={size} value={size}>
+                      {size}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {/* Stock status */}
           <div className="flex items-center mb-6">
             <Badge variant={product.inStock ? "default" : "destructive"} className="px-3 py-1">
@@ -198,7 +279,7 @@ const ProductDetail = () => {
           <div className="flex flex-col sm:flex-row gap-3 mb-8">
             <Button
               onClick={handleAddToCart}
-              disabled={!product.inStock}
+              disabled={!product.inStock || (hasSizes && !selectedSize)}
               className="flex-1"
               size="lg"
             >
@@ -213,6 +294,13 @@ const ProductDetail = () => {
               <Share className="h-5 w-5" />
             </Button>
           </div>
+
+          {/* Size selection warning */}
+          {hasSizes && !selectedSize && product.inStock && (
+            <p className="text-sm text-red-500 mb-4">
+              Please select a size before adding to cart
+            </p>
+          )}
         </div>
       </div>
 
@@ -346,6 +434,23 @@ const ProductDetail = () => {
       )}
     </div>
   );
+};
+
+// Helper function to determine if a color is light or dark
+const isLightColor = (hex: string): boolean => {
+  // Remove # if present
+  hex = hex.replace('#', '');
+  
+  // Convert hex to RGB
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  
+  // Calculate brightness (simple formula)
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  
+  // Return true if the color is light (brightness > 128)
+  return brightness > 128;
 };
 
 export default ProductDetail;
