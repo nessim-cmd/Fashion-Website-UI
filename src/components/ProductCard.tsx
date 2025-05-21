@@ -1,0 +1,86 @@
+
+import { Link } from "react-router-dom";
+import { Product } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { ShoppingCart } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useCart } from "@/contexts/CartContext";
+
+interface ProductCardProps {
+  product: Product;
+  featured?: boolean;
+}
+
+const ProductCard = ({ product, featured = false }: ProductCardProps) => {
+  const { addItem } = useCart();
+
+  const onAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addItem(product);
+  };
+
+  return (
+    <Link 
+      to={`/product/${product.slug}`}
+      className={`product-card block group rounded-lg overflow-hidden border ${featured ? 'featured-product' : ''}`}
+    >
+      <div className="relative aspect-square overflow-hidden">
+        <img
+          src={product.images[0]}
+          alt={product.name}
+          className="w-full h-full object-cover transition-transform group-hover:scale-105"
+        />
+        {!product.inStock && (
+          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+            <Badge variant="destructive" className="text-lg font-bold px-4 py-2">
+              Out of Stock
+            </Badge>
+          </div>
+        )}
+        {product.salePrice && (
+          <Badge className="absolute top-2 right-2 bg-red-500">
+            Sale
+          </Badge>
+        )}
+      </div>
+      
+      <div className="p-4">
+        <div className="flex items-start justify-between">
+          <h3 className="font-medium text-lg line-clamp-1">{product.name}</h3>
+          <div className="flex items-center gap-1">
+            <span className="text-yellow-500">★</span>
+            <span className="text-sm">{product.rating.toFixed(1)}</span>
+          </div>
+        </div>
+        
+        <div className="mt-2 flex items-center">
+          {product.salePrice ? (
+            <>
+              <span className="price">${product.salePrice.toFixed(2)}</span>
+              <span className="sale-price ml-2">
+                ${product.price.toFixed(2)}
+              </span>
+            </>
+          ) : (
+            <span className="price">${product.price.toFixed(2)}</span>
+          )}
+        </div>
+        
+        <div className="mt-3">
+          <Button 
+            onClick={onAddToCart} 
+            variant="outline" 
+            className="w-full gap-2 group-hover:bg-primary group-hover:text-primary-foreground"
+            disabled={!product.inStock}
+          >
+            <ShoppingCart className="h-4 w-4" />
+            Add to Cart
+          </Button>
+        </div>
+      </div>
+    </Link>
+  );
+};
+
+export default ProductCard;

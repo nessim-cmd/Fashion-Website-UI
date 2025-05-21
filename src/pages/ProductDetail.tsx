@@ -1,0 +1,351 @@
+
+import { useParams, Link } from "react-router-dom";
+import { useState } from "react";
+import { products } from "@/lib/data";
+import { useCart } from "@/contexts/CartContext";
+import { Button } from "@/components/ui/button";
+import { 
+  ShoppingCart, 
+  Heart, 
+  Share, 
+  MinusCircle, 
+  PlusCircle, 
+  Star, 
+  StarHalf, 
+  Truck 
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import ProductCard from "@/components/ProductCard";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const ProductDetail = () => {
+  const { slug } = useParams<{ slug: string }>();
+  const { addItem } = useCart();
+  const [quantity, setQuantity] = useState(1);
+  const [selectedImage, setSelectedImage] = useState(0);
+
+  const product = products.find((p) => p.slug === slug);
+
+  if (!product) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <h1 className="text-3xl font-bold mb-4">Product Not Found</h1>
+        <p className="mb-8">The product you are looking for does not exist.</p>
+        <Link to="/products">
+          <Button>Back to Products</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  const incrementQuantity = () => setQuantity(q => q + 1);
+  const decrementQuantity = () => setQuantity(q => (q > 1 ? q - 1 : 1));
+
+  const handleAddToCart = () => {
+    addItem(product, quantity);
+  };
+
+  // Get related products (same category, excluding current)
+  const relatedProducts = products
+    .filter(
+      (p) => p.categoryId === product.categoryId && p.id !== product.id
+    )
+    .slice(0, 4);
+
+  // Generate rating stars
+  const renderStars = (rating: number) => {
+    const stars = [];
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 >= 0.5;
+
+    for (let i = 0; i < fullStars; i++) {
+      stars.push(<Star key={`star-${i}`} className="h-5 w-5 fill-yellow-400 text-yellow-400" />);
+    }
+
+    if (hasHalfStar) {
+      stars.push(<StarHalf key="half-star" className="h-5 w-5 fill-yellow-400 text-yellow-400" />);
+    }
+
+    const emptyStars = 5 - stars.length;
+    for (let i = 0; i < emptyStars; i++) {
+      stars.push(
+        <Star key={`empty-star-${i}`} className="h-5 w-5 text-gray-300" />
+      );
+    }
+
+    return stars;
+  };
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex flex-col lg:flex-row gap-8">
+        {/* Product Images */}
+        <div className="w-full lg:w-1/2">
+          <div className="relative aspect-square rounded-lg overflow-hidden mb-4">
+            <img
+              src={product.images[selectedImage]}
+              alt={product.name}
+              className="w-full h-full object-cover"
+            />
+            {!product.inStock && (
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                <Badge variant="destructive" className="text-lg font-bold px-4 py-2">
+                  Out of Stock
+                </Badge>
+              </div>
+            )}
+            {product.salePrice && (
+              <Badge className="absolute top-4 right-4 bg-red-500 px-3 py-1 text-base">
+                Sale
+              </Badge>
+            )}
+          </div>
+
+          {/* Thumbnails */}
+          <div className="flex space-x-2 overflow-x-auto">
+            {product.images.map((image, index) => (
+              <button
+                key={index}
+                className={`w-20 h-20 rounded border-2 overflow-hidden ${
+                  index === selectedImage ? "border-primary" : "border-transparent"
+                }`}
+                onClick={() => setSelectedImage(index)}
+              >
+                <img
+                  src={image}
+                  alt={`${product.name} thumbnail ${index + 1}`}
+                  className="w-full h-full object-cover"
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Product Details */}
+        <div className="w-full lg:w-1/2">
+          {/* Product info */}
+          <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
+          
+          <div className="flex items-center mb-4">
+            <div className="flex mr-2">
+              {renderStars(product.rating)}
+            </div>
+            <span className="text-sm text-gray-600">
+              ({product.reviewCount} reviews)
+            </span>
+          </div>
+          
+          <div className="mb-6">
+            {product.salePrice ? (
+              <div className="flex items-center">
+                <span className="text-3xl font-bold text-primary">
+                  ${product.salePrice.toFixed(2)}
+                </span>
+                <span className="ml-3 text-xl line-through text-gray-500">
+                  ${product.price.toFixed(2)}
+                </span>
+                <Badge className="ml-3 bg-red-500">
+                  Save ${(product.price - product.salePrice).toFixed(2)}
+                </Badge>
+              </div>
+            ) : (
+              <span className="text-3xl font-bold text-primary">
+                ${product.price.toFixed(2)}
+              </span>
+            )}
+          </div>
+          
+          <div className="prose prose-sm mb-6 max-w-none">
+            <p>{product.description}</p>
+          </div>
+
+          {/* Stock status */}
+          <div className="flex items-center mb-6">
+            <Badge variant={product.inStock ? "default" : "destructive"} className="px-3 py-1">
+              {product.inStock ? "In Stock" : "Out of Stock"}
+            </Badge>
+            
+            {product.inStock && (
+              <div className="ml-4 flex items-center text-sm text-gray-600">
+                <Truck className="h-4 w-4 mr-1" />
+                <span>Free shipping on orders over $75</span>
+              </div>
+            )}
+          </div>
+
+          {/* Quantity selector */}
+          {product.inStock && (
+            <div className="flex items-center mb-6">
+              <span className="mr-4 font-medium">Quantity:</span>
+              <div className="flex items-center border rounded-md">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={decrementQuantity}
+                  disabled={quantity <= 1}
+                >
+                  <MinusCircle className="h-4 w-4" />
+                </Button>
+                <span className="w-12 text-center">{quantity}</span>
+                <Button variant="ghost" size="icon" onClick={incrementQuantity}>
+                  <PlusCircle className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-8">
+            <Button
+              onClick={handleAddToCart}
+              disabled={!product.inStock}
+              className="flex-1"
+              size="lg"
+            >
+              <ShoppingCart className="mr-2 h-5 w-5" />
+              Add to Cart
+            </Button>
+            <Button variant="outline" size="lg">
+              <Heart className="mr-2 h-5 w-5" />
+              Wishlist
+            </Button>
+            <Button variant="outline" size="icon" className="hidden sm:flex">
+              <Share className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Product details tabs */}
+      <div className="mt-12">
+        <Tabs defaultValue="details">
+          <TabsList className="w-full grid grid-cols-3">
+            <TabsTrigger value="details">Product Details</TabsTrigger>
+            <TabsTrigger value="specs">Specifications</TabsTrigger>
+            <TabsTrigger value="reviews">Reviews</TabsTrigger>
+          </TabsList>
+          <TabsContent value="details" className="p-6 border rounded-b-lg">
+            <div className="prose max-w-none">
+              <p>
+                {product.description}
+              </p>
+              <p>
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla 
+                quam velit, vulputate eu pharetra nec, mattis ac neque. Duis 
+                vulputate commodo lectus, ac blandit elit tincidunt id.
+              </p>
+              <ul>
+                <li>High-quality materials</li>
+                <li>Durable construction</li>
+                <li>Designed for everyday use</li>
+                <li>Modern aesthetics</li>
+              </ul>
+            </div>
+          </TabsContent>
+          <TabsContent value="specs" className="p-6 border rounded-b-lg">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="border-b pb-2">
+                <div className="font-medium">Category</div>
+                <div className="text-gray-600">
+                  {product.categoryId === "1" && "Electronics"}
+                  {product.categoryId === "2" && "Fashion"}
+                  {product.categoryId === "3" && "Home & Garden"}
+                  {product.categoryId === "4" && "Books"}
+                </div>
+              </div>
+              <div className="border-b pb-2">
+                <div className="font-medium">Product ID</div>
+                <div className="text-gray-600">{product.id}</div>
+              </div>
+              <div className="border-b pb-2">
+                <div className="font-medium">Rating</div>
+                <div className="text-gray-600">{product.rating} out of 5</div>
+              </div>
+              <div className="border-b pb-2">
+                <div className="font-medium">Stock Status</div>
+                <div className="text-gray-600">
+                  {product.inStock ? "In Stock" : "Out of Stock"}
+                </div>
+              </div>
+              <div className="border-b pb-2">
+                <div className="font-medium">On Sale</div>
+                <div className="text-gray-600">
+                  {product.salePrice ? "Yes" : "No"}
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+          <TabsContent value="reviews" className="p-6 border rounded-b-lg">
+            <div className="mb-8">
+              <div className="flex items-center mb-4">
+                <div className="flex mr-2">
+                  {renderStars(product.rating)}
+                </div>
+                <span className="text-xl font-medium">
+                  {product.rating.toFixed(1)} out of 5
+                </span>
+              </div>
+              <div className="text-sm text-gray-500">
+                Based on {product.reviewCount} reviews
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              {/* Example reviews - in a real app these would come from API */}
+              <div className="border-b pb-4">
+                <div className="flex items-center mb-2">
+                  <div className="flex mr-2">
+                    {renderStars(5)}
+                  </div>
+                  <div className="font-medium">John D.</div>
+                </div>
+                <p className="text-sm mb-1">
+                  Great product, exactly as described. Would buy again!
+                </p>
+                <div className="text-xs text-gray-500">2 months ago</div>
+              </div>
+              <div className="border-b pb-4">
+                <div className="flex items-center mb-2">
+                  <div className="flex mr-2">
+                    {renderStars(4)}
+                  </div>
+                  <div className="font-medium">Sarah M.</div>
+                </div>
+                <p className="text-sm mb-1">
+                  Good quality but shipping took a bit longer than expected.
+                </p>
+                <div className="text-xs text-gray-500">1 month ago</div>
+              </div>
+              <div>
+                <div className="flex items-center mb-2">
+                  <div className="flex mr-2">
+                    {renderStars(5)}
+                  </div>
+                  <div className="font-medium">David R.</div>
+                </div>
+                <p className="text-sm mb-1">
+                  Absolutely love it! The quality exceeded my expectations.
+                </p>
+                <div className="text-xs text-gray-500">2 weeks ago</div>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* Related Products */}
+      {relatedProducts.length > 0 && (
+        <div className="mt-16">
+          <h2 className="text-2xl font-bold mb-6">Related Products</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {relatedProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ProductDetail;
