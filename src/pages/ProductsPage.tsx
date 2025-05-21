@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { products, categories } from "@/lib/data";
@@ -10,7 +9,7 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Filter, Search, SlidersHorizontal } from "lucide-react";
+import { Filter, Search, SlidersHorizontal, LayoutGrid, LayoutList } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +19,7 @@ import {
   CollapsibleContent 
 } from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 const ProductsPage = () => {
   const location = useLocation();
@@ -37,6 +37,8 @@ const ProductsPage = () => {
   const [onSaleOnly, setOnSaleOnly] = useState(false);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  // New state for view mode (grid or list)
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   // Derived state for available options based on selection
   const availableSubcategories = useMemo(() => {
@@ -340,6 +342,39 @@ const ProductsPage = () => {
     </div>
   );
 
+  // Function to render products based on view mode
+  const renderProducts = () => {
+    if (filteredProducts.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <h3 className="text-xl font-medium mb-2">No products found</h3>
+          <p className="text-gray-500 mb-6">
+            Try adjusting your search or filter criteria
+          </p>
+          <Button onClick={clearFilters}>Clear Filters</Button>
+        </div>
+      );
+    }
+
+    if (viewMode === "grid") {
+      return (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+          {filteredProducts.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      );
+    } else {
+      return (
+        <div className="flex flex-col space-y-4">
+          {filteredProducts.map((product) => (
+            <ProductCard key={product.id} product={product} viewMode="list" />
+          ))}
+        </div>
+      );
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Fashion Collection</h1>
@@ -390,6 +425,16 @@ const ProductsPage = () => {
             </div>
 
             <div className="flex gap-3 items-center">
+              {/* View mode toggle */}
+              <ToggleGroup type="single" value={viewMode} onValueChange={(value) => value && setViewMode(value as "grid" | "list")}>
+                <ToggleGroupItem value="grid" aria-label="Grid view">
+                  <LayoutGrid className="h-4 w-4" />
+                </ToggleGroupItem>
+                <ToggleGroupItem value="list" aria-label="List view">
+                  <LayoutList className="h-4 w-4" />
+                </ToggleGroupItem>
+              </ToggleGroup>
+
               {/* Sort dropdown */}
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-[180px]">
@@ -423,22 +468,8 @@ const ProductsPage = () => {
             </div>
           </div>
 
-          {/* Products grid */}
-          {filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-              {filteredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <h3 className="text-xl font-medium mb-2">No products found</h3>
-              <p className="text-gray-500 mb-6">
-                Try adjusting your search or filter criteria
-              </p>
-              <Button onClick={clearFilters}>Clear Filters</Button>
-            </div>
-          )}
+          {/* Products grid or list */}
+          {renderProducts()}
         </div>
       </div>
     </div>
