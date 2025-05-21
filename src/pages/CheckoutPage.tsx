@@ -20,7 +20,6 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/sonner";
@@ -30,6 +29,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Separator } from "@/components/ui/separator";
 import { countries } from "@/lib/data";
+import { Cash } from "lucide-react";
 
 // Define a schema for form validation
 const checkoutSchema = z.object({
@@ -41,13 +41,10 @@ const checkoutSchema = z.object({
   state: z.string().min(2, "State/Province is required"),
   postalCode: z.string().min(4, "Postal/ZIP code is required"),
   country: z.string().min(2, "Country is required"),
-  paymentMethod: z.enum(["credit-card", "paypal", "bank-transfer"]),
   saveInfo: z.boolean().optional(),
   // Fixed the error: the terms field now correctly accepts boolean but is validated to be true
-  terms: z.boolean({
-    required_error: "You must accept the terms and conditions",
-  }).refine(val => val === true, {
-    message: "You must accept the terms and conditions",
+  terms: z.literal<boolean>(true, {
+    errorMap: () => ({ message: "You must accept the terms and conditions" }),
   }),
 });
 
@@ -68,7 +65,6 @@ const CheckoutPage = () => {
     fullName: user?.name || "",
     email: user?.email || "",
     country: "US",
-    paymentMethod: "credit-card",
     saveInfo: true,
     terms: false,
   };
@@ -106,7 +102,7 @@ const CheckoutPage = () => {
         tax,
         total,
         shippingAddress,
-        paymentMethod: values.paymentMethod,
+        paymentMethod: "cash-on-delivery",
         date: new Date().toISOString(),
       };
       
@@ -306,44 +302,16 @@ const CheckoutPage = () => {
                 </div>
               </div>
 
-              {/* Payment Method */}
+              {/* Payment Method - Cash on Delivery only */}
               <div>
                 <h2 className="text-xl font-semibold mb-4">Payment Method</h2>
-                <FormField
-                  control={form.control}
-                  name="paymentMethod"
-                  render={({ field }) => (
-                    <FormItem className="space-y-3">
-                      <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          className="space-y-3"
-                        >
-                          <div className="flex items-center space-x-2 border rounded-lg p-4">
-                            <RadioGroupItem value="credit-card" id="credit-card" />
-                            <Label htmlFor="credit-card" className="flex-1">Credit / Debit Card</Label>
-                            <div className="flex gap-2">
-                              <div className="bg-gray-100 rounded p-1">Visa</div>
-                              <div className="bg-gray-100 rounded p-1">MC</div>
-                              <div className="bg-gray-100 rounded p-1">Amex</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-2 border rounded-lg p-4">
-                            <RadioGroupItem value="paypal" id="paypal" />
-                            <Label htmlFor="paypal" className="flex-1">PayPal</Label>
-                            <div className="bg-blue-500 text-white rounded p-1 text-sm">PayPal</div>
-                          </div>
-                          <div className="flex items-center space-x-2 border rounded-lg p-4">
-                            <RadioGroupItem value="bank-transfer" id="bank-transfer" />
-                            <Label htmlFor="bank-transfer" className="flex-1">Bank Transfer</Label>
-                          </div>
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="flex items-center space-x-2 border rounded-lg p-4 bg-gray-50">
+                  <Cash className="h-6 w-6 text-gray-600" />
+                  <div className="ml-2">
+                    <p className="font-medium">Cash on Delivery</p>
+                    <p className="text-sm text-gray-500">Pay when your order arrives</p>
+                  </div>
+                </div>
               </div>
 
               {/* Terms and Conditions */}
@@ -373,7 +341,7 @@ const CheckoutPage = () => {
 
               <div className="pt-4 lg:hidden">
                 <Button type="submit" className="w-full" disabled={processing}>
-                  {processing ? "Processing..." : `Pay $${total.toFixed(2)}`}
+                  {processing ? "Processing..." : `Place Order: $${total.toFixed(2)}`}
                 </Button>
               </div>
             </form>
@@ -433,6 +401,13 @@ const CheckoutPage = () => {
                 <span>Total</span>
                 <span>${total.toFixed(2)}</span>
               </div>
+
+              <div className="mt-4 p-3 bg-blue-50 text-blue-800 rounded-md text-sm">
+                <p className="flex items-center">
+                  <Cash className="h-4 w-4 mr-2" />
+                  <span>Cash on Delivery</span>
+                </p>
+              </div>
             </div>
 
             <div className="mt-6 hidden lg:block">
@@ -442,7 +417,7 @@ const CheckoutPage = () => {
                 onClick={form.handleSubmit(onSubmit)}
                 disabled={processing}
               >
-                {processing ? "Processing..." : `Pay $${total.toFixed(2)}`}
+                {processing ? "Processing..." : `Place Order: $${total.toFixed(2)}`}
               </Button>
             </div>
 

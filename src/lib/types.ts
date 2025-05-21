@@ -14,6 +14,14 @@ export interface Subcategory {
   description?: string;
   categoryId: string;
   slug: string;
+  subSubcategories?: SubSubcategory[];
+}
+
+export interface SubSubcategory {
+  id: string;
+  name: string;
+  subcategoryId: string;
+  slug: string;
 }
 
 export interface Product {
@@ -21,10 +29,11 @@ export interface Product {
   name: string;
   description: string;
   price: number;
-  salePrice?: number;
+  salePrice?: number | null;
   images: string[];
   categoryId: string;
   subcategoryId?: string;
+  subSubcategoryId?: string;
   featured: boolean;
   inStock: boolean;
   rating: number;
@@ -52,7 +61,7 @@ export interface Order {
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   total: number;
   shippingAddress: Address;
-  paymentMethod: string;
+  paymentMethod: 'cash-on-delivery';
   createdAt: string;
   couponApplied?: Coupon;
 }

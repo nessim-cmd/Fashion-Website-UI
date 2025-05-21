@@ -1,8 +1,8 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { products, categories } from "@/lib/data";
-import { Product } from "@/lib/types";
+import { Product, Subcategory, SubSubcategory } from "@/lib/types";
 import ProductCard from "@/components/ProductCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,21 +14,43 @@ import { Filter, Search, SlidersHorizontal } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import { 
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent 
+} from "@/components/ui/collapsible";
+import { Separator } from "@/components/ui/separator";
 
 const ProductsPage = () => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const queryParams = new URLSearchParams(location.search);
 
-  // States for filtering
+  // States for hierarchical filtering
   const [searchTerm, setSearchTerm] = useState(queryParams.get("search") || "");
   const [categoryId, setCategoryId] = useState<string | null>(queryParams.get("category") || null);
+  const [subcategoryId, setSubcategoryId] = useState<string | null>(queryParams.get("subcategory") || null);
+  const [subSubcategoryId, setSubSubcategoryId] = useState<string | null>(queryParams.get("subSubcategory") || null);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 2000]);
   const [sortBy, setSortBy] = useState(queryParams.get("sort") || "featured");
   const [inStockOnly, setInStockOnly] = useState(false);
   const [onSaleOnly, setOnSaleOnly] = useState(false);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
+
+  // Derived state for available options based on selection
+  const availableSubcategories = useMemo(() => {
+    if (!categoryId) return [];
+    const category = categories.find(cat => cat.id === categoryId);
+    return category?.subcategories || [];
+  }, [categoryId]);
+
+  const availableSubSubcategories = useMemo(() => {
+    if (!subcategoryId) return [];
+    const category = categories.find(cat => cat.id === categoryId);
+    const subcategory = category?.subcategories?.find(sub => sub.id === subcategoryId);
+    return subcategory?.subSubcategories || [];
+  }, [categoryId, subcategoryId]);
 
   // Apply filters
   useEffect(() => {
@@ -44,8 +66,12 @@ const ProductsPage = () => {
       );
     }
 
-    // Category filter
-    if (categoryId) {
+    // Hierarchical category filter
+    if (subSubcategoryId) {
+      filtered = filtered.filter((product) => product.subSubcategoryId === subSubcategoryId);
+    } else if (subcategoryId) {
+      filtered = filtered.filter((product) => product.subcategoryId === subcategoryId);
+    } else if (categoryId) {
       filtered = filtered.filter((product) => product.categoryId === categoryId);
     }
 
@@ -99,10 +125,25 @@ const ProductsPage = () => {
     // Update active filters list
     const newActiveFilters: string[] = [];
     if (searchTerm) newActiveFilters.push(`Search: ${searchTerm}`);
-    if (categoryId) {
-      const category = categories.find((cat) => cat.id === categoryId);
+    
+    if (subSubcategoryId) {
+      const category = categories.find(cat => cat.id === categoryId);
+      const subcategory = category?.subcategories?.find(sub => sub.id === subcategoryId);
+      const subSubcategory = subcategory?.subSubcategories?.find(sub => sub.id === subSubcategoryId);
+      if (category && subcategory && subSubcategory) {
+        newActiveFilters.push(`Category: ${category.name} > ${subcategory.name} > ${subSubcategory.name}`);
+      }
+    } else if (subcategoryId) {
+      const category = categories.find(cat => cat.id === categoryId);
+      const subcategory = category?.subcategories?.find(sub => sub.id === subcategoryId);
+      if (category && subcategory) {
+        newActiveFilters.push(`Category: ${category.name} > ${subcategory.name}`);
+      }
+    } else if (categoryId) {
+      const category = categories.find(cat => cat.id === categoryId);
       if (category) newActiveFilters.push(`Category: ${category.name}`);
     }
+    
     if (priceRange[0] > 0 || priceRange[1] < 2000) {
       newActiveFilters.push(`Price: $${priceRange[0]} - $${priceRange[1]}`);
     }
@@ -111,11 +152,13 @@ const ProductsPage = () => {
 
     setActiveFilters(newActiveFilters);
     setFilteredProducts(filtered);
-  }, [searchTerm, categoryId, priceRange, inStockOnly, onSaleOnly, sortBy]);
+  }, [searchTerm, categoryId, subcategoryId, subSubcategoryId, priceRange, inStockOnly, onSaleOnly, sortBy]);
 
   const clearFilters = () => {
     setSearchTerm("");
     setCategoryId(null);
+    setSubcategoryId(null);
+    setSubSubcategoryId(null);
     setPriceRange([0, 2000]);
     setInStockOnly(false);
     setOnSaleOnly(false);
@@ -125,7 +168,23 @@ const ProductsPage = () => {
     if (filter.startsWith("Search:")) {
       setSearchTerm("");
     } else if (filter.startsWith("Category:")) {
-      setCategoryId(null);
+      // Handle hierarchical category removal
+      if (filter.includes(">")) {
+        const levels = filter.split(">").length - 1;
+        if (levels === 2) {
+          // It's a sub-subcategory filter
+          setSubSubcategoryId(null);
+        } else if (levels === 1) {
+          // It's a subcategory filter
+          setSubcategoryId(null);
+          setSubSubcategoryId(null);
+        }
+      } else {
+        // It's just a category filter
+        setCategoryId(null);
+        setSubcategoryId(null);
+        setSubSubcategoryId(null);
+      }
     } else if (filter.startsWith("Price:")) {
       setPriceRange([0, 2000]);
     } else if (filter === "In Stock Only") {
@@ -135,7 +194,87 @@ const ProductsPage = () => {
     }
   };
 
-  // Function to render filter components
+  // Function to render hierarchical category filters
+  const renderCategoryFilters = () => (
+    <div className="space-y-4">
+      <h3 className="text-lg font-medium">Categories</h3>
+      
+      {/* Main categories dropdown */}
+      <Select
+        value={categoryId || "all"}
+        onValueChange={(value) => {
+          setCategoryId(value === "all" ? null : value);
+          setSubcategoryId(null);
+          setSubSubcategoryId(null);
+        }}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="All Categories" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Categories</SelectItem>
+          {categories.map((category) => (
+            <SelectItem key={category.id} value={category.id}>
+              {category.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {/* Subcategories - only show if a category is selected */}
+      {categoryId && availableSubcategories.length > 0 && (
+        <div className="ml-4 border-l-2 border-gray-200 pl-4">
+          <h4 className="text-md font-medium mb-2">Subcategories</h4>
+          <Select
+            value={subcategoryId || "all"}
+            onValueChange={(value) => {
+              setSubcategoryId(value === "all" ? null : value);
+              setSubSubcategoryId(null);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All Subcategories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Subcategories</SelectItem>
+              {availableSubcategories.map((subcategory) => (
+                <SelectItem key={subcategory.id} value={subcategory.id}>
+                  {subcategory.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Sub-Subcategories - only show if both category and subcategory are selected */}
+      {categoryId && subcategoryId && availableSubSubcategories.length > 0 && (
+        <div className="ml-8 border-l-2 border-gray-200 pl-4">
+          <h4 className="text-md font-medium mb-2">Specific Types</h4>
+          <Select
+            value={subSubcategoryId || "all"}
+            onValueChange={(value) => {
+              setSubSubcategoryId(value === "all" ? null : value);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              {availableSubSubcategories.map((subSubcategory) => (
+                <SelectItem key={subSubcategory.id} value={subSubcategory.id}>
+                  {subSubcategory.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+    </div>
+  );
+
+  // Function to render all filter components
   const renderFilters = () => (
     <div className="space-y-6">
       <div>
@@ -144,7 +283,7 @@ const ProductsPage = () => {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search products..."
+            placeholder="Search fashion items..."
             className="pl-9"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -152,25 +291,8 @@ const ProductsPage = () => {
         </div>
       </div>
 
-      <div>
-        <h3 className="text-lg font-medium mb-3">Categories</h3>
-        <Select
-          value={categoryId || "all"}
-          onValueChange={(value) => setCategoryId(value === "all" ? null : value)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="All Categories" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {categories.map((category) => (
-              <SelectItem key={category.id} value={category.id}>
-                {category.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Hierarchical Category Filters */}
+      {renderCategoryFilters()}
 
       <div>
         <h3 className="text-lg font-medium mb-3">Price Range</h3>
@@ -179,7 +301,6 @@ const ProductsPage = () => {
           max={2000} 
           step={10}
           value={priceRange}
-          // Fix the TypeScript error by using a properly typed callback
           onValueChange={(value: [number, number]) => setPriceRange(value)}
           className="mb-2"
         />
@@ -221,7 +342,7 @@ const ProductsPage = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Products</h1>
+      <h1 className="text-3xl font-bold mb-6">Fashion Collection</h1>
 
       {/* Active filters */}
       {activeFilters.length > 0 && (
