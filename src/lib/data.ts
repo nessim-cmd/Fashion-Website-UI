@@ -1,4 +1,3 @@
-
 import { Product, Category, Subcategory, SubSubcategory, Banner, Coupon } from './types';
 
 export const countries = [
@@ -66,7 +65,7 @@ export const categories: Category[] = [
     id: '2',
     name: 'Men',
     description: 'Men\'s fashion collection',
-    image: 'https://images.unsplash.com/photo-1580051155285-438ddd18f837',
+    image: 'https://images.unsplash.com/photo-1598033129183-c4f50c736f10',
     slug: 'men',
     subcategories: [
       { 
@@ -186,7 +185,14 @@ export const products: Product[] = [
     inStock: true,
     rating: 4.8,
     reviewCount: 124,
-    slug: 'floral-summer-dress'
+    slug: 'floral-summer-dress',
+    // Added sizes and colors
+    sizes: ['XS', 'S', 'M', 'L', 'XL'],
+    colors: [
+      { name: 'Blue', hex: '#1e40af' },
+      { name: 'Pink', hex: '#ec4899' },
+      { name: 'White', hex: '#ffffff' }
+    ]
   },
   {
     id: '2',
@@ -202,7 +208,13 @@ export const products: Product[] = [
     inStock: true,
     rating: 4.9,
     reviewCount: 45,
-    slug: 'designer-handbag'
+    slug: 'designer-handbag',
+    // Added colors only (no sizes for bags)
+    colors: [
+      { name: 'Black', hex: '#000000' },
+      { name: 'Brown', hex: '#964B00' },
+      { name: 'Red', hex: '#dc2626' }
+    ]
   },
   // Men's products
   {
@@ -219,7 +231,14 @@ export const products: Product[] = [
     inStock: true,
     rating: 4.5,
     reviewCount: 56,
-    slug: 'slim-fit-shirt'
+    slug: 'slim-fit-shirt',
+    // Added sizes and colors
+    sizes: ['S', 'M', 'L', 'XL', 'XXL'],
+    colors: [
+      { name: 'White', hex: '#ffffff' },
+      { name: 'Light Blue', hex: '#93c5fd' },
+      { name: 'Black', hex: '#000000' }
+    ]
   },
   {
     id: '4',
@@ -235,7 +254,13 @@ export const products: Product[] = [
     inStock: true,
     rating: 4.7,
     reviewCount: 38,
-    slug: 'formal-leather-shoes'
+    slug: 'formal-leather-shoes',
+    // Added sizes and colors
+    sizes: ['7', '8', '9', '10', '11', '12'],
+    colors: [
+      { name: 'Brown', hex: '#964B00' },
+      { name: 'Black', hex: '#000000' }
+    ]
   },
 ];
 
@@ -257,6 +282,68 @@ for (let i = 5; i <= 30; i++) {
   
   const isFeatured = i <= 10; // First 10 products are featured
   
+  // Define sizes based on category and subcategory
+  let sizes: string[] = [];
+  let colors: { name: string; hex: string }[] = [];
+  
+  // Set sizes based on product type
+  if (categoryId === '1' || categoryId === '2') { // Women's or Men's
+    if (subcategoryId === '1' || subcategoryId === '4') { // Clothing
+      sizes = ['XS', 'S', 'M', 'L', 'XL'];
+      // Add XXL for men's clothing
+      if (categoryId === '2') {
+        sizes.push('XXL');
+      }
+    } else if (subcategoryId === '2' || subcategoryId === '5') { // Shoes
+      // Women's shoe sizes
+      if (categoryId === '1') {
+        sizes = ['5', '6', '7', '8', '9', '10'];
+      } else { // Men's shoe sizes
+        sizes = ['7', '8', '9', '10', '11', '12'];
+      }
+    }
+    // No sizes for accessories
+  } else if (categoryId === '3') { // Kids
+    // Kids clothing sizes
+    sizes = ['3T', '4T', '5T', '6', '7', '8'];
+  } else if (categoryId === '4') { // Seasonal
+    // Standard sizes for seasonal items
+    sizes = ['S', 'M', 'L', 'XL'];
+  }
+  
+  // Set colors based on product index for variety
+  const colorSets = [
+    [
+      { name: 'Black', hex: '#000000' },
+      { name: 'White', hex: '#ffffff' }
+    ],
+    [
+      { name: 'Red', hex: '#dc2626' },
+      { name: 'Blue', hex: '#2563eb' },
+      { name: 'Green', hex: '#16a34a' }
+    ],
+    [
+      { name: 'Navy', hex: '#1e3a8a' },
+      { name: 'Gray', hex: '#6b7280' },
+      { name: 'Beige', hex: '#f5f5dc' }
+    ],
+    [
+      { name: 'Purple', hex: '#7e22ce' },
+      { name: 'Pink', hex: '#ec4899' },
+      { name: 'Yellow', hex: '#eab308' }
+    ],
+    [
+      { name: 'Brown', hex: '#964B00' },
+      { name: 'Olive', hex: '#808000' },
+      { name: 'Teal', hex: '#0d9488' }
+    ]
+  ];
+  
+  colors = colorSets[i % colorSets.length];
+  
+  // For some accessories, only include colors (no sizes)
+  const isAccessory = subcategoryId === '3' || subcategoryId === '6';
+  
   products.push({
     id: i.toString(),
     name: `Fashion Item ${i}`,
@@ -271,7 +358,11 @@ for (let i = 5; i <= 30; i++) {
     inStock: i % 5 !== 0, // Every 5th product is out of stock
     rating: 3.5 + (Math.random() * 1.5),
     reviewCount: Math.floor(Math.random() * 100) + 10,
-    slug: `fashion-item-${i}`
+    slug: `fashion-item-${i}`,
+    // Add sizes only if not an accessory
+    ...(isAccessory ? {} : { sizes }),
+    // Add colors to all products
+    colors
   });
 }
 

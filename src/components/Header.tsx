@@ -1,17 +1,18 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ShoppingCart, User, Menu, Search, X } from "lucide-react";
+import { ShoppingCart, User, Menu, Search, X, Heart } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWishlist } from "@/contexts/WishlistContext";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { categories } from "@/lib/data";
 
 const Header = () => {
   const { itemCount } = useCart();
+  const { itemCount: wishlistCount } = useWishlist();
   const { isAuthenticated, isAdmin, user, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -62,6 +63,17 @@ const Header = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </form>
+          
+          <Link to="/wishlist">
+            <Button variant="ghost" size="icon" className="relative">
+              <Heart className="h-5 w-5" />
+              {wishlistCount > 0 && (
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center">
+                  {wishlistCount}
+                </Badge>
+              )}
+            </Button>
+          </Link>
           
           <Link to="/cart">
             <Button variant="ghost" size="icon" className="relative">
@@ -141,6 +153,17 @@ const Header = () => {
             </SheetContent>
           </Sheet>
           
+          <Link to="/wishlist">
+            <Button variant="ghost" size="icon" className="relative">
+              <Heart className="h-5 w-5" />
+              {wishlistCount > 0 && (
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center">
+                  {wishlistCount}
+                </Badge>
+              )}
+            </Button>
+          </Link>
+          
           <Link to="/cart">
             <Button variant="ghost" size="icon" className="relative">
               <ShoppingCart className="h-5 w-5" />
@@ -165,6 +188,9 @@ const Header = () => {
                 </Link>
                 <Link to="/products" className="px-4 py-2 hover:bg-accent rounded-md">
                   Products
+                </Link>
+                <Link to="/wishlist" className="px-4 py-2 hover:bg-accent rounded-md">
+                  Wishlist
                 </Link>
                 {categories.map((category) => (
                   <Link

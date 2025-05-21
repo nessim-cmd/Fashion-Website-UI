@@ -1,8 +1,8 @@
-
 import { useParams, Link } from "react-router-dom";
 import { useState } from "react";
 import { products } from "@/lib/data";
 import { useCart } from "@/contexts/CartContext";
+import { useWishlist } from "@/contexts/WishlistContext";
 import { Button } from "@/components/ui/button";
 import { 
   ShoppingCart, 
@@ -26,10 +26,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ProductColor } from "@/lib/types";
+import { toast } from "@/components/ui/use-toast";
 
 const ProductDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const { addItem } = useCart();
+  const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlist();
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string | undefined>(undefined);
@@ -54,6 +56,27 @@ const ProductDetail = () => {
 
   const handleAddToCart = () => {
     addItem(product, quantity, selectedSize, selectedColor);
+    toast({
+      title: "Added to cart",
+      description: `${product.name} has been added to your cart.`,
+    });
+  };
+
+  const toggleWishlist = () => {
+    if (isInWishlist(product.id)) {
+      removeFromWishlist(product.id);
+      toast({
+        title: "Removed from wishlist",
+        description: `${product.name} has been removed from your wishlist.`,
+        variant: "destructive",
+      });
+    } else {
+      addToWishlist(product);
+      toast({
+        title: "Added to wishlist",
+        description: `${product.name} has been added to your wishlist.`,
+      });
+    }
   };
 
   // Check if product has sizes or colors
@@ -89,6 +112,20 @@ const ProductDetail = () => {
     }
 
     return stars;
+  };
+
+  // Helper function to determine if a color is light or dark
+  const isLightColor = (hex: string) => {
+    // Convert hex to RGB
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    
+    // Calculate brightness (using common formula)
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    
+    // Return true if color is light
+    return brightness > 128;
   };
 
   return (
@@ -286,9 +323,14 @@ const ProductDetail = () => {
               <ShoppingCart className="mr-2 h-5 w-5" />
               Add to Cart
             </Button>
-            <Button variant="outline" size="lg">
-              <Heart className="mr-2 h-5 w-5" />
-              Wishlist
+            <Button 
+              variant="outline" 
+              size="lg"
+              onClick={toggleWishlist}
+              className={isInWishlist(product.id) ? "bg-pink-50 text-pink-600 border-pink-300 hover:bg-pink-100" : ""}
+            >
+              <Heart className={`mr-2 h-5 w-5 ${isInWishlist(product.id) ? "fill-pink-600" : ""}`} />
+              {isInWishlist(product.id) ? "In Wishlist" : "Wishlist"}
             </Button>
             <Button variant="outline" size="icon" className="hidden sm:flex">
               <Share className="h-5 w-5" />
@@ -335,10 +377,10 @@ const ProductDetail = () => {
               <div className="border-b pb-2">
                 <div className="font-medium">Category</div>
                 <div className="text-gray-600">
-                  {product.categoryId === "1" && "Electronics"}
-                  {product.categoryId === "2" && "Fashion"}
-                  {product.categoryId === "3" && "Home & Garden"}
-                  {product.categoryId === "4" && "Books"}
+                  {product.categoryId === "1" && "Women"}
+                  {product.categoryId === "2" && "Men"}
+                  {product.categoryId === "3" && "Kids"}
+                  {product.categoryId === "4" && "Seasonal"}
                 </div>
               </div>
               <div className="border-b pb-2">
@@ -424,33 +466,16 @@ const ProductDetail = () => {
       {/* Related Products */}
       {relatedProducts.length > 0 && (
         <div className="mt-16">
-          <h2 className="text-2xl font-bold mb-6">Related Products</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {relatedProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
+          <h2 className="text-2xl font-bold mb-6">You May Also Like</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {relatedProducts.map((relatedProduct) => (
+              <ProductCard key={relatedProduct.id} product={relatedProduct} />
             ))}
           </div>
         </div>
       )}
     </div>
   );
-};
-
-// Helper function to determine if a color is light or dark
-const isLightColor = (hex: string): boolean => {
-  // Remove # if present
-  hex = hex.replace('#', '');
-  
-  // Convert hex to RGB
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-  
-  // Calculate brightness (simple formula)
-  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-  
-  // Return true if the color is light (brightness > 128)
-  return brightness > 128;
 };
 
 export default ProductDetail;
