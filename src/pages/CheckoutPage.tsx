@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
@@ -29,7 +28,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Separator } from "@/components/ui/separator";
 import { countries } from "@/lib/data";
-import { Cash } from "lucide-react";
+import { Banknote } from "lucide-react";
 
 // Define a schema for form validation
 const checkoutSchema = z.object({
@@ -306,7 +305,7 @@ const CheckoutPage = () => {
               <div>
                 <h2 className="text-xl font-semibold mb-4">Payment Method</h2>
                 <div className="flex items-center space-x-2 border rounded-lg p-4 bg-gray-50">
-                  <Cash className="h-6 w-6 text-gray-600" />
+                  <Banknote className="h-6 w-6 text-gray-600" />
                   <div className="ml-2">
                     <p className="font-medium">Cash on Delivery</p>
                     <p className="text-sm text-gray-500">Pay when your order arrives</p>
@@ -404,7 +403,7 @@ const CheckoutPage = () => {
 
               <div className="mt-4 p-3 bg-blue-50 text-blue-800 rounded-md text-sm">
                 <p className="flex items-center">
-                  <Cash className="h-4 w-4 mr-2" />
+                  <Banknote className="h-4 w-4 mr-2" />
                   <span>Cash on Delivery</span>
                 </p>
               </div>
