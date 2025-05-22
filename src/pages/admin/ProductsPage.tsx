@@ -60,7 +60,7 @@ interface AdminProduct extends Product {
   stock?: number;
 }
 
-const ProductsPage = () => {
+const ProductsAdminPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
@@ -379,4 +379,4 @@ const ProductsPage = () => {
   );
 };
 
-export default ProductsPage;
+export default ProductsAdminPage;

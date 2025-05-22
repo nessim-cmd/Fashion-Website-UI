@@ -176,7 +176,7 @@ const categoryFormSchema = z.object({
   parent: z.string().optional(),
 });
 
-const CategoriesPage = () => {
+const CategoriesAdminPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
@@ -619,4 +619,4 @@ const CategoriesPage = () => {
   );
 };
 
-export default CategoriesPage;
+export default CategoriesAdminPage;
