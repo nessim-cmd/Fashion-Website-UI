@@ -227,7 +227,7 @@ const OrdersPage = () => {
       case "shipped":
         return "default";
       case "delivered":
-        return "success";
+        return "default"; // Changed from "success" to "default"
       case "cancelled":
         return "destructive";
       default:

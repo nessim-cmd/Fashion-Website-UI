@@ -1,419 +1,477 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from "react";
-import { Navigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
-} from "@/components/ui/tabs";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import AdminLayout from "@/components/AdminLayout";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { toast } from "@/components/ui/sonner";
-import { coupons } from "@/lib/data";
-import { Coupon } from "@/lib/types";
-import { Calendar, Clock, DollarSign, Package, Users } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/contexts/AuthContext";
+import { products } from "@/lib/data";
+import { Eye, MoreHorizontal, Edit, Package, Users, ShoppingBag, DollarSign, TrendingUp, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Product } from "@/lib/types";
 
-const couponSchema = z.object({
-  code: z.string().min(4, {
-    message: "Coupon code must be at least 4 characters",
-  }),
-  discount: z.coerce.number().min(1, {
-    message: "Discount must be at least 1",
-  }),
-  type: z.enum(["percentage", "fixed"]),
-  minPurchase: z.coerce.number().optional(),
-  expiresAt: z.string().min(1, {
-    message: "Expiration date is required",
-  }),
-});
+// Mock recent orders data
+const recentOrders = [
+  {
+    id: "ORD-001",
+    date: "2025-05-15T10:30:00Z",
+    customer: {
+      id: "CUST-001",
+      name: "John Doe",
+      email: "john.doe@example.com",
+    },
+    status: "pending",
+    total: 129.99,
+  },
+  {
+    id: "ORD-002",
+    date: "2025-05-14T14:45:00Z",
+    customer: {
+      id: "CUST-002",
+      name: "Jane Smith",
+      email: "jane.smith@example.com",
+    },
+    status: "processing",
+    total: 249.99,
+  },
+  {
+    id: "ORD-003",
+    date: "2025-05-13T09:15:00Z",
+    customer: {
+      id: "CUST-003",
+      name: "Robert Johnson",
+      email: "robert.johnson@example.com",
+    },
+    status: "shipped",
+    total: 69.99,
+  },
+  {
+    id: "ORD-004",
+    date: "2025-05-12T16:20:00Z",
+    customer: {
+      id: "CUST-004",
+      name: "Emily Davis",
+      email: "emily.davis@example.com",
+    },
+    status: "delivered",
+    total: 189.98,
+  },
+  {
+    id: "ORD-005",
+    date: "2025-05-11T11:05:00Z",
+    customer: {
+      id: "CUST-005",
+      name: "Michael Wilson",
+      email: "michael.wilson@example.com",
+    },
+    status: "cancelled",
+    total: 129.99,
+  },
+];
+
+// Mock sales data for charts
+const salesData = {
+  daily: [
+    { date: "Mon", amount: 1200 },
+    { date: "Tue", amount: 1800 },
+    { date: "Wed", amount: 1600 },
+    { date: "Thu", amount: 2200 },
+    { date: "Fri", amount: 1900 },
+    { date: "Sat", amount: 2400 },
+    { date: "Sun", amount: 2100 },
+  ],
+  monthly: [
+    { date: "Jan", amount: 12000 },
+    { date: "Feb", amount: 14000 },
+    { date: "Mar", amount: 16000 },
+    { date: "Apr", amount: 18000 },
+    { date: "May", amount: 21000 },
+    { date: "Jun", amount: 19000 },
+    { date: "Jul", amount: 22000 },
+    { date: "Aug", amount: 24000 },
+    { date: "Sep", amount: 26000 },
+    { date: "Oct", amount: 23000 },
+    { date: "Nov", amount: 25000 },
+    { date: "Dec", amount: 28000 },
+  ],
+};
+
+// Mock category distribution data
+const categoryData = [
+  { name: "Women's Clothing", value: 40 },
+  { name: "Men's Clothing", value: 30 },
+  { name: "Accessories", value: 15 },
+  { name: "Footwear", value: 10 },
+  { name: "Seasonal", value: 5 },
+];
+
+// Add a sold property to the Product type for this component
+interface ProductWithSales extends Product {
+  sold?: number;
+}
 
 const AdminDashboard = () => {
-  const { isAdmin, user } = useAuth();
-  const [orders, setOrders] = useState<any[]>(() => {
-    try {
-      const ordersStr = localStorage.getItem("orders");
-      return ordersStr ? JSON.parse(ordersStr) : [];
-    } catch (error) {
-      console.error("Error loading orders:", error);
-      return [];
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [chartPeriod, setChartPeriod] = useState("weekly");
+  
+  // Redirect non-admin users
+  useEffect(() => {
+    if (user && user.email !== "admin@example.com") {
+      navigate("/");
     }
+  }, [user, navigate]);
+
+  // Get top selling products - add mock sold data
+  const productsWithSales = products.map((product, index) => {
+    // Add a mock sold count based on product index
+    return {
+      ...product,
+      sold: Math.floor(Math.random() * 100) + (30 - (index % 30)) // Higher for first products
+    } as ProductWithSales;
   });
 
-  const [adminCoupons, setAdminCoupons] = useState<Coupon[]>(coupons);
-  const [isLoading, setIsLoading] = useState(false);
+  // Sort by sold count
+  const topProducts = [...productsWithSales]
+    .sort((a, b) => (b.sold || 0) - (a.sold || 0))
+    .slice(0, 5);
 
-  const form = useForm<z.infer<typeof couponSchema>>({
-    resolver: zodResolver(couponSchema),
-    defaultValues: {
-      code: "",
-      discount: 10,
-      type: "percentage",
-      minPurchase: 0,
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-    },
-  });
-
-  if (!isAdmin || !user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  const onSubmit = (data: z.infer<typeof couponSchema>) => {
-    setIsLoading(true);
-    
-    // Create a new coupon
-    const newCoupon: Coupon = {
-      id: String(adminCoupons.length + 1),
-      code: data.code.toUpperCase(),
-      discount: data.discount,
-      type: data.type,
-      minPurchase: data.minPurchase,
-      expiresAt: new Date(data.expiresAt).toISOString(),
-      isActive: true,
-    };
-
-    // Simulate API call
-    setTimeout(() => {
-      setAdminCoupons([...adminCoupons, newCoupon]);
-      toast.success(`Coupon "${newCoupon.code}" created successfully!`);
-      form.reset();
-      setIsLoading(false);
-    }, 1000);
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "outline";
+      case "processing":
+        return "secondary";
+      case "shipped":
+        return "default";
+      case "delivered":
+        return "default";
+      case "cancelled":
+        return "destructive";
+      default:
+        return "outline";
+    }
   };
 
-  const toggleCouponStatus = (couponId: string) => {
-    setAdminCoupons(
-      adminCoupons.map((coupon) =>
-        coupon.id === couponId
-          ? { ...coupon, isActive: !coupon.isActive }
-          : coupon
-      )
+  // Calculate summary metrics
+  const totalRevenue = recentOrders.reduce((sum, order) => 
+    order.status !== "cancelled" ? sum + order.total : sum, 0);
+  
+  const totalOrders = recentOrders.filter(order => 
+    order.status !== "cancelled").length;
+  
+  const totalCustomers = new Set(recentOrders.map(order => order.customer.id)).size;
+  
+  const totalProducts = products.length;
+
+  // Function to render the sales chart using HTML/CSS
+  const renderSalesChart = () => {
+    const data = chartPeriod === "weekly" ? salesData.daily : salesData.monthly;
+    const maxAmount = Math.max(...data.map(item => item.amount));
+    
+    return (
+      <div className="w-full h-64 flex items-end space-x-2">
+        {data.map((item, index) => {
+          const height = (item.amount / maxAmount) * 100;
+          return (
+            <div key={index} className="flex flex-col items-center flex-1">
+              <div 
+                className="w-full bg-primary/80 hover:bg-primary rounded-t-sm transition-all"
+                style={{ height: `${height}%` }}
+              ></div>
+              <div className="text-xs mt-2">{item.date}</div>
+            </div>
+          );
+        })}
+      </div>
     );
   };
 
-  const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
-  const totalOrders = orders.length;
-  const pendingOrders = orders.filter(order => order.status === 'pending').length;
-  const uniqueCustomers = new Set(orders.map(order => order.userId)).size;
+  // Function to render the category distribution chart
+  const renderCategoryChart = () => {
+    const total = categoryData.reduce((sum, item) => sum + item.value, 0);
+    
+    return (
+      <div className="space-y-4">
+        {categoryData.map((item, index) => {
+          const percentage = (item.value / total) * 100;
+          return (
+            <div key={index} className="space-y-1">
+              <div className="flex justify-between text-sm">
+                <span>{item.name}</span>
+                <span>{percentage.toFixed(1)}%</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2">
+                <div 
+                  className="bg-primary rounded-full h-2" 
+                  style={{ width: `${percentage}%` }}
+                ></div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+    <AdminLayout>
+      <div className="flex flex-col gap-6">
         <div>
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <p className="text-gray-600">Welcome back, {user.name}</p>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Welcome back, Admin! Here's an overview of your store.
+          </p>
         </div>
-        
-        <div className="mt-4 md:mt-0">
-          <Button>Export Data</Button>
-        </div>
-      </div>
 
-      {/* Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <Card>
-          <CardContent className="flex items-center p-6">
-            <div className="bg-primary/10 p-3 rounded-full mr-4">
-              <DollarSign className="h-8 w-8 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Total Revenue</p>
-              <p className="text-2xl font-bold">${totalRevenue.toFixed(2)}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex items-center p-6">
-            <div className="bg-green-100 p-3 rounded-full mr-4">
-              <Package className="h-8 w-8 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Total Orders</p>
-              <p className="text-2xl font-bold">{totalOrders}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex items-center p-6">
-            <div className="bg-blue-100 p-3 rounded-full mr-4">
-              <Clock className="h-8 w-8 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Pending Orders</p>
-              <p className="text-2xl font-bold">{pendingOrders}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex items-center p-6">
-            <div className="bg-purple-100 p-3 rounded-full mr-4">
-              <Users className="h-8 w-8 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Customers</p>
-              <p className="text-2xl font-bold">{uniqueCustomers}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs defaultValue="orders" className="space-y-6">
-        <TabsList className="grid grid-cols-2 md:w-[400px]">
-          <TabsTrigger value="orders">Orders</TabsTrigger>
-          <TabsTrigger value="coupons">Coupons</TabsTrigger>
-        </TabsList>
-
-        {/* Orders Tab */}
-        <TabsContent value="orders">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Recent Orders</CardTitle>
-              <CardDescription>Manage customer orders and track deliveries</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {orders.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No orders yet</p>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between space-y-0">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
+                  <p className="text-2xl font-bold">${totalRevenue.toFixed(2)}</p>
                 </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Order ID</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {orders.map((order) => (
-                        <TableRow key={order.id}>
-                          <TableCell className="font-medium">#{order.id}</TableCell>
-                          <TableCell>{new Date(order.date).toLocaleDateString()}</TableCell>
-                          <TableCell>{order.shippingAddress?.fullName || "N/A"}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="capitalize">
-                              {order.status || "pending"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">${order.total.toFixed(2)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                <div className="p-2 rounded-full bg-primary/10">
+                  <DollarSign className="h-5 w-5 text-primary" />
                 </div>
-              )}
+              </div>
+              <div className="flex items-center pt-4 text-sm text-green-600">
+                <ArrowUpRight className="h-4 w-4 mr-1" />
+                <span>+12.5% from last month</span>
+              </div>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        {/* Coupons Tab */}
-        <TabsContent value="coupons">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Create Coupon */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Create Coupon</CardTitle>
-                <CardDescription>Add a new discount coupon</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="code"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Coupon Code</FormLabel>
-                          <FormControl>
-                            <Input placeholder="SUMMER25" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between space-y-0">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Orders</p>
+                  <p className="text-2xl font-bold">{totalOrders}</p>
+                </div>
+                <div className="p-2 rounded-full bg-primary/10">
+                  <Package className="h-5 w-5 text-primary" />
+                </div>
+              </div>
+              <div className="flex items-center pt-4 text-sm text-green-600">
+                <ArrowUpRight className="h-4 w-4 mr-1" />
+                <span>+8.2% from last month</span>
+              </div>
+            </CardContent>
+          </Card>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="discount"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Discount Amount</FormLabel>
-                            <FormControl>
-                              <Input type="number" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between space-y-0">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Customers</p>
+                  <p className="text-2xl font-bold">{totalCustomers}</p>
+                </div>
+                <div className="p-2 rounded-full bg-primary/10">
+                  <Users className="h-5 w-5 text-primary" />
+                </div>
+              </div>
+              <div className="flex items-center pt-4 text-sm text-green-600">
+                <ArrowUpRight className="h-4 w-4 mr-1" />
+                <span>+5.7% from last month</span>
+              </div>
+            </CardContent>
+          </Card>
 
-                      <FormField
-                        control={form.control}
-                        name="type"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Discount Type</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select type" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="percentage">Percentage (%)</SelectItem>
-                                <SelectItem value="fixed">Fixed Amount ($)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between space-y-0">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Products</p>
+                  <p className="text-2xl font-bold">{totalProducts}</p>
+                </div>
+                <div className="p-2 rounded-full bg-primary/10">
+                  <ShoppingBag className="h-5 w-5 text-primary" />
+                </div>
+              </div>
+              <div className="flex items-center pt-4 text-sm text-red-600">
+                <ArrowDownRight className="h-4 w-4 mr-1" />
+                <span>-2.3% from last month</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="minPurchase"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Min Purchase ($)</FormLabel>
-                            <FormControl>
-                              <Input type="number" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+        {/* Charts and Tables */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Sales Chart */}
+          <Card className="lg:col-span-2">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle>Sales Overview</CardTitle>
+                <div className="flex items-center space-x-2">
+                  <Button 
+                    variant={chartPeriod === "weekly" ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => setChartPeriod("weekly")}
+                  >
+                    Weekly
+                  </Button>
+                  <Button 
+                    variant={chartPeriod === "monthly" ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => setChartPeriod("monthly")}
+                  >
+                    Monthly
+                  </Button>
+                </div>
+              </div>
+              <CardDescription>
+                {chartPeriod === "weekly" ? "Sales for the past week" : "Sales for the past year"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {renderSalesChart()}
+            </CardContent>
+          </Card>
 
-                      <FormField
-                        control={form.control}
-                        name="expiresAt"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Expiration Date</FormLabel>
-                            <FormControl>
-                              <Input type="date" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+          {/* Category Distribution */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle>Category Distribution</CardTitle>
+              <CardDescription>
+                Product distribution by category
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {renderCategoryChart()}
+            </CardContent>
+          </Card>
+        </div>
 
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                      {isLoading ? "Creating..." : "Create Coupon"}
-                    </Button>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Recent Orders */}
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle>Recent Orders</CardTitle>
+                <Link to="/admin/orders">
+                  <Button variant="outline" size="sm">View All</Button>
+                </Link>
+              </div>
+              <CardDescription>
+                Latest customer orders
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Order ID</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recentOrders.slice(0, 5).map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium">{order.id}</TableCell>
+                      <TableCell>{order.customer.name}</TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusBadgeVariant(order.status)} className="capitalize">
+                          {order.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">${order.total.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">
+                        <Link to={`/admin/orders`}>
+                          <Button variant="ghost" size="icon">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
 
-            {/* Existing Coupons */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Active Coupons</CardTitle>
-                <CardDescription>Manage existing discount coupons</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {adminCoupons.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">No coupons yet</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {adminCoupons.map((coupon) => (
-                      <div 
-                        key={coupon.id} 
-                        className={`border rounded-lg p-4 ${
-                          !coupon.isActive && "bg-gray-50 opacity-60"
-                        }`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <div className="text-lg font-semibold">
-                              {coupon.code}{" "}
-                              <Badge variant={coupon.isActive ? "default" : "secondary"} className="ml-2">
-                                {coupon.isActive ? "Active" : "Inactive"}
-                              </Badge>
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {coupon.type === "percentage" 
-                                ? `${coupon.discount}% off` 
-                                : `$${coupon.discount} off`}
-                              
-                              {coupon.minPurchase && coupon.minPurchase > 0 && (
-                                <span> on orders over ${coupon.minPurchase}</span>
-                              )}
-                            </div>
-                            <div className="flex items-center text-xs text-gray-500 mt-1">
-                              <Calendar className="h-3 w-3 mr-1" />
-                              Expires: {new Date(coupon.expiresAt).toLocaleDateString()}
-                            </div>
-                          </div>
-                          <div>
-                            <Button 
-                              variant={coupon.isActive ? "default" : "outline"} 
-                              size="sm"
-                              onClick={() => toggleCouponStatus(coupon.id)}
-                            >
-                              {coupon.isActive ? "Deactivate" : "Activate"}
+          {/* Top Products */}
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle>Top Products</CardTitle>
+                <Link to="/admin/products">
+                  <Button variant="outline" size="sm">View All</Button>
+                </Link>
+              </div>
+              <CardDescription>
+                Best selling products
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Sold</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {topProducts.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell className="font-medium">{product.name}</TableCell>
+                      <TableCell>${product.price.toFixed(2)}</TableCell>
+                      <TableCell>{product.sold || 0}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
                             </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <Link to={`/admin/products`}>
+                              <DropdownMenuItem>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View
+                              </DropdownMenuItem>
+                            </Link>
+                            <Link to={`/admin/products/edit/${product.id}`}>
+                              <DropdownMenuItem>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                            </Link>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </AdminLayout>
   );
 };
 
