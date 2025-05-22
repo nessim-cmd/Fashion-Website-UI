@@ -11,7 +11,10 @@ import {
   ChevronDown,
   Menu,
   X,
-  LogOut
+  LogOut,
+  User,
+  Image,
+  TicketPercent
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -69,10 +72,11 @@ const NavItem = ({
 
 const AdminLayout = ({ children }: AdminLayoutProps) => {
   const location = useLocation();
-  const { logout } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const [isExpanded, setIsExpanded] = useState(true);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [activeSubNav, setActiveSubNav] = useState<string | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const toggleSubNav = (subNav: string) => {
     setActiveSubNav(activeSubNav === subNav ? null : subNav);
@@ -113,6 +117,11 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       ],
     },
     {
+      href: "/admin/banners",
+      icon: <Image className="h-5 w-5" />,
+      title: "Banners",
+    },
+    {
       href: "/admin/orders",
       icon: <Package className="h-5 w-5" />,
       title: "Orders",
@@ -128,7 +137,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     },
     {
       href: "/admin/coupons",
-      icon: <Users className="h-5 w-5" />,
+      icon: <TicketPercent className="h-5 w-5" />,
       title: "Coupons",
     },
     {
@@ -332,7 +341,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         )}
       >
         {/* Header */}
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
+        <header className="sticky top-0 z-20 flex h-16 items-center justify-end border-b bg-background px-4 md:px-6">
           <Button
             variant="ghost"
             size="icon"
@@ -341,8 +350,58 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <div className="ml-auto flex items-center gap-4">
+          
+          <div className="flex items-center gap-4">
             <NotificationIcon />
+            
+            {/* User Profile Button */}
+            <div className="relative">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="flex items-center gap-2"
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+              >
+                <User className="h-5 w-5" />
+                {isAuthenticated && user && (
+                  <span>{user.name.split(" ")[0]}</span>
+                )}
+              </Button>
+              
+              {/* Dropdown Menu */}
+              {userMenuOpen && (
+                <div className="absolute right-0 mt-2 w-40 bg-white shadow-lg rounded-md p-2 z-50">
+                  {isAuthenticated ? (
+                    <>
+                      <Link to="/">
+                        <Button variant="ghost" className="w-full justify-start" size="sm">
+                          Go to Shop
+                        </Button>
+                      </Link>
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50"
+                        size="sm"
+                        onClick={() => {
+                          logout();
+                          setUserMenuOpen(false);
+                        }}
+                      >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Logout
+                      </Button>
+                    </>
+                  ) : (
+                    <Link to="/login" className="w-full">
+                      <Button variant="ghost" className="w-full justify-start" size="sm">
+                        <User className="mr-2 h-4 w-4" />
+                        Login
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </header>
 

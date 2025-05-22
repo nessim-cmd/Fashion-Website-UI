@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ShoppingCart, User, Menu, Search, X, Heart } from "lucide-react";
@@ -16,6 +16,15 @@ const Header = () => {
   const { isAuthenticated, isAdmin, user, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const location = useLocation();
+
+  // Check if current path contains '/admin'
+  const isAdminPath = location.pathname.includes('/admin');
+
+  // Don't render header on admin paths
+  if (isAdminPath) {
+    return null;
+  }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,8 +1,17 @@
-
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Facebook, Twitter, Instagram, Youtube } from "lucide-react";
 
 const Footer = () => {
+  const location = useLocation();
+  
+  // Check if current path contains '/admin'
+  const isAdminPath = location.pathname.includes('/admin');
+  
+  // Don't render footer on admin paths
+  if (isAdminPath) {
+    return null;
+  }
+  
   return (
     <footer className="bg-gray-900 text-white pt-12 pb-8">
       <div className="container mx-auto">

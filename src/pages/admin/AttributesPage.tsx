@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { Plus, Pencil, Trash2, X, Check } from "lucide-react";
+import AdminLayout from "@/components/AdminLayout";
 
 const AttributesPage = () => {
   const { toast } = useToast();
@@ -131,19 +132,20 @@ const AttributesPage = () => {
   };
 
   return (
-    <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Product Attributes</h1>
-        <Button onClick={() => {
-          setNewAttribute({ name: "", isActive: true });
-          setEditMode(false);
-          setIsAddDialogOpen(true);
-        }}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Attribute
-        </Button>
-      </div>
-
+    <AdminLayout>
+      <div className="container mx-auto py-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">Product Attributes</h1>
+          <Button onClick={() => {
+            setNewAttribute({ name: "", isActive: true });
+            setEditMode(false);
+            setIsAddDialogOpen(true);
+          }}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Attribute
+          </Button>
+        </div>
+        </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Attributes List */}
         <Card className="md:col-span-1">
@@ -342,7 +344,7 @@ const AttributesPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </AdminLayout>
   );
 };
 
