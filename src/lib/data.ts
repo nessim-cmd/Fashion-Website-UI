@@ -1,4 +1,4 @@
-import { Product, Category, Subcategory, SubSubcategory, Banner, Coupon } from './types';
+import { Product, Category, Subcategory, SubSubcategory, Banner, Coupon, SpecialOffer } from './types';
 
 export const countries = [
   { code: "US", name: "United States" },
@@ -419,6 +419,36 @@ export const coupons: Coupon[] = [
     type: 'fixed',
     minPurchase: 75,
     expiresAt: '2026-12-31T23:59:59Z',
+    isActive: true,
+  },
+];
+
+export const specialOffers: SpecialOffer[] = [
+  {
+    id: '1',
+    value: '10%',
+    title: 'First Order Discount',
+    description: 'Use code WELCOME10 at checkout',
+    buttonText: 'Shop Now',
+    linkUrl: '/products',
+    isActive: true,
+  },
+  {
+    id: '2',
+    value: '$15',
+    title: 'Free Shipping',
+    description: 'On all orders over $75',
+    buttonText: 'Shop Now',
+    linkUrl: '/products',
+    isActive: true,
+  },
+  {
+    id: '3',
+    value: '25%',
+    title: 'Summer Sale',
+    description: 'Limited time only',
+    buttonText: 'Shop Now',
+    linkUrl: '/products',
     isActive: true,
   },
 ];

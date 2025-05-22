@@ -109,3 +109,13 @@ export interface Banner {
   linkUrl?: string;
   isActive: boolean;
 }
+
+export interface SpecialOffer {
+  id: string;
+  value: string;
+  title: string;
+  description: string;
+  buttonText?: string;
+  linkUrl?: string;
+  isActive: boolean;
+}

@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { products, categories, banners } from "@/lib/data";
+import { products, categories, banners, specialOffers } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import ProductCard from "@/components/ProductCard";
 import CategoryCard from "@/components/CategoryCard";
@@ -123,35 +123,16 @@ const Index = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Offer Card 1 */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-center">
-              <div className="text-5xl font-bold mb-4">10%</div>
-              <h3 className="text-xl font-semibold mb-2">First Order Discount</h3>
-              <p className="mb-4">Use code WELCOME10 at checkout</p>
-              <Link to="/products">
-                <Button variant="secondary">Shop Now</Button>
-              </Link>
-            </div>
-            
-            {/* Offer Card 2 */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-center">
-              <div className="text-5xl font-bold mb-4">$15</div>
-              <h3 className="text-xl font-semibold mb-2">Free Shipping</h3>
-              <p className="mb-4">On all orders over $75</p>
-              <Link to="/products">
-                <Button variant="secondary">Shop Now</Button>
-              </Link>
-            </div>
-            
-            {/* Offer Card 3 */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-center">
-              <div className="text-5xl font-bold mb-4">25%</div>
-              <h3 className="text-xl font-semibold mb-2">Summer Sale</h3>
-              <p className="mb-4">Limited time only</p>
-              <Link to="/products">
-                <Button variant="secondary">Shop Now</Button>
-              </Link>
-            </div>
+            {specialOffers.filter(offer => offer.isActive).map((offer) => (
+              <div key={offer.id} className="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-center">
+                <div className="text-5xl font-bold mb-4">{offer.value}</div>
+                <h3 className="text-xl font-semibold mb-2">{offer.title}</h3>
+                <p className="mb-4">{offer.description}</p>
+                <Link to={offer.linkUrl || "/products"}>
+                  <Button variant="secondary">{offer.buttonText || "Shop Now"}</Button>
+                </Link>
+              </div>
+            ))}
           </div>
         </div>
       </section>

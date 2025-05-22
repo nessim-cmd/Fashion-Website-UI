@@ -14,7 +14,7 @@ import {
   LogOut,
   User,
   Image,
-  TicketPercent
+  TicketPercent,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -35,7 +35,8 @@ interface NavItemProps {
   isExpanded?: boolean;
   hasSubNav?: boolean;
   subNavOpen?: boolean;
-  onClick?: () => void;
+  // Updated to handle event parameter
+  onClick?: (event?: React.MouseEvent<HTMLAnchorElement>) => void;
 }
 
 const NavItem = ({
@@ -122,6 +123,11 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       title: "Banners",
     },
     {
+      href: "/admin/specialoffers",
+      icon: <Tag className="h-5 w-5" />,
+      title: "Special Offers",
+    },
+    {
       href: "/admin/orders",
       icon: <Package className="h-5 w-5" />,
       title: "Orders",
@@ -191,7 +197,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                         hasSubNav={hasSubNav}
                         subNavOpen={subNavOpen}
                         onClick={(e) => {
-                          e.preventDefault();
+                          e?.preventDefault();
                           toggleSubNav(item.title);
                         }}
                       />
@@ -285,7 +291,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                           hasSubNav={hasSubNav}
                           subNavOpen={subNavOpen}
                           onClick={(e) => {
-                            e.preventDefault();
+                            e?.preventDefault();
                             toggleSubNav(item.title);
                           }}
                         />
@@ -350,24 +356,22 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
           >
             <Menu className="h-5 w-5" />
           </Button>
-          
+
           <div className="flex items-center gap-4">
             <NotificationIcon />
-            
+
             {/* User Profile Button */}
             <div className="relative">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
                 className="flex items-center gap-2"
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
               >
                 <User className="h-5 w-5" />
-                {isAuthenticated && user && (
-                  <span>{user.name.split(" ")[0]}</span>
-                )}
+                {isAuthenticated && user && <span>{user.name.split(" ")[0]}</span>}
               </Button>
-              
+
               {/* Dropdown Menu */}
               {userMenuOpen && (
                 <div className="absolute right-0 mt-2 w-40 bg-white shadow-lg rounded-md p-2 z-50">
