@@ -22,6 +22,10 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
+import ProductFormPage from "./pages/admin/ProductFormPage";
+import CategoriesPage from "./pages/admin/CategoriesPage";
+import OrdersPage from "./pages/admin/OrdersPage";
+import CustomersPage from "./pages/admin/CustomersPage";
 
 const queryClient = new QueryClient();
 
@@ -45,10 +49,31 @@ const App = () => (
                     <Route path="/cart" element={<CartPage />} />
                     <Route path="/wishlist" element={<WishlistPage />} />
                     <Route path="/checkout" element={<CheckoutPage />} />
-                    <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
+                    <Route
+                      path="/order-confirmation/:orderId"
+                      element={<OrderConfirmation />}
+                    />
                     <Route path="/login" element={<Login />} />
                     <Route path="/signup" element={<Signup />} />
                     <Route path="/admin" element={<AdminDashboard />} />
+                    <Route path="/admin/products" element={<ProductsPage />} />
+                    <Route
+                      path="/admin/products/new"
+                      element={<ProductFormPage />}
+                    />
+                    <Route
+                      path="/admin/products/edit/:id"
+                      element={<ProductFormPage />}
+                    />
+                    <Route
+                      path="/admin/categories"
+                      element={<CategoriesPage />}
+                    />
+                    <Route path="/admin/orders" element={<OrdersPage />} />
+                    <Route
+                      path="/admin/customers"
+                      element={<CustomersPage />}
+                    />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </main>
