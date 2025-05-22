@@ -50,7 +50,7 @@ const Login = () => {
       if (storedUser) {
         const user = JSON.parse(storedUser);
         if (user.isAdmin) {
-          navigate("/admin/dashboard");
+          navigate("/admin");
         } else {
           navigate("/");
         }
