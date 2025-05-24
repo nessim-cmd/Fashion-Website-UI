@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { ProductColor } from "@/lib/types";
 import { toast } from "@/components/ui/use-toast";
+import React from "react";
 
 const ProductDetail = () => {
   const { slug } = useParams<{ slug: string }>();

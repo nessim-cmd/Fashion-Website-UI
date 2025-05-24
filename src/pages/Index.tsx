@@ -7,6 +7,7 @@ import ProductCard from "@/components/ProductCard";
 import CategoryCard from "@/components/CategoryCard";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { ArrowRight } from "lucide-react";
+import React from "react";
 
 const Index = () => {
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);

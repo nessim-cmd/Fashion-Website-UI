@@ -29,6 +29,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Separator } from "@/components/ui/separator";
 import { countries } from "@/lib/data";
 import { Banknote } from "lucide-react";
+import React from "react";
 
 // Define a schema for form validation
 const checkoutSchema = z.object({

@@ -1,121 +1,149 @@
-
-import { createContext, useContext, useState, useEffect } from "react";
-import { User } from "@/lib/types";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { toast } from "@/components/ui/sonner";
+import { api } from "@/utils/api";
+import React from "react";
 
-interface AuthContextType {
-  user: User | null;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
-  isAuthenticated: boolean;
+// Define user type
+type User = {
+  id: string;
+  name: string;
+  email: string;
   isAdmin: boolean;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
 };
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
-  children 
-}) => {
+// Define context type
+type AuthContextType = {
+  user: User | null;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+  login: (email: string, password: string ) => Promise<void>;
+  signup: (name: string, email: string, password: string) => Promise<void>;
+  logout: () => void;
+};
+
+// Create context
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Provider component
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+
+  // Check if user is authenticated
+  const isAuthenticated = !!user;
+  const isAdmin = user?.isAdmin || false;
 
   useEffect(() => {
     // Check if user is stored in local storage
     const storedUser = localStorage.getItem("user");
-    if (storedUser) {
+    const token = localStorage.getItem("token");
+    
+    if (storedUser && token) {
       try {
         setUser(JSON.parse(storedUser));
+        
+        // Verify token validity with backend
+        api.getCurrentUser()
+          .catch(() => {
+            // Token invalid, clear storage
+            localStorage.removeItem("user");
+            localStorage.removeItem("token");
+            setUser(null);
+          });
       } catch (error) {
         console.error("Failed to parse stored user:", error);
         localStorage.removeItem("user");
+        localStorage.removeItem("token");
       }
     }
   }, []);
 
-  // Mock login function (would be replaced with real auth in production)
+  // Login function
   const login = async (email: string, password: string) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    // Simple validation
-    if (!email.includes('@') || password.length < 6) {
-      toast.error('Invalid email or password');
-      throw new Error("Invalid email or password");
+    try {
+      const userData = await api.login({ email, password });
+      
+      setUser({
+        id: userData.id,
+        name: userData.name,
+        email: userData.email,
+        isAdmin: userData.isAdmin,
+      });
+      
+      // Store token in localStorage
+      localStorage.setItem('token', userData.token);
+      localStorage.setItem('user', JSON.stringify({
+        id: userData.id,
+        name: userData.name,
+        email: userData.email,
+        isAdmin: userData.isAdmin,
+      }));
+      
+      toast.success('Login successful!');
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('Login failed. Please check your credentials.');
+      throw error;
     }
-
-    // Mock users
-    if (email === "admin@example.com" && password === "admin123") {
-      const adminUser: User = {
-        id: "1",
-        name: "Admin User",
-        email: "admin@example.com",
-        isAdmin: true,
-      };
-      setUser(adminUser);
-      localStorage.setItem("user", JSON.stringify(adminUser));
-      toast.success("Welcome back, Admin!");
-      return;
-    }
-
-    // Regular user login
-    const newUser: User = {
-      id: "2",
-      name: email.split('@')[0],
-      email,
-      isAdmin: false,
-    };
-    setUser(newUser);
-    localStorage.setItem("user", JSON.stringify(newUser));
-    toast.success("Login successful!");
   };
 
+  // Signup function
   const signup = async (name: string, email: string, password: string) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    // Simple validation
-    if (!name || !email.includes('@') || password.length < 6) {
-      toast.error('Please check your information');
-      throw new Error("Invalid user information");
+    try {
+      const userData = await api.register({ name, email, password });
+      
+      setUser({
+        id: userData.id,
+        name: userData.name,
+        email: userData.email,
+        isAdmin: userData.isAdmin,
+      });
+      
+      // Store token in localStorage
+      localStorage.setItem('token', userData.token);
+      localStorage.setItem('user', JSON.stringify({
+        id: userData.id,
+        name: userData.name,
+        email: userData.email,
+        isAdmin: userData.isAdmin,
+      }));
+      
+      toast.success('Account created successfully!');
+    } catch (error) {
+      console.error('Signup error:', error);
+      toast.error('Signup failed. Please try again.');
+      throw error;
     }
-
-    // Create new user
-    const newUser: User = {
-      id: Math.floor(Math.random() * 1000 + 10).toString(),
-      name,
-      email,
-      isAdmin: false,
-    };
-    setUser(newUser);
-    localStorage.setItem("user", JSON.stringify(newUser));
-    toast.success("Account created successfully!");
   };
 
+  // Logout function
   const logout = () => {
     setUser(null);
     localStorage.removeItem("user");
+    localStorage.removeItem("token");
     toast.success("Logged out successfully");
   };
 
-  const isAuthenticated = !!user;
-  const isAdmin = !!user?.isAdmin;
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated,
+        isAdmin,
+        login,
+        signup,
+        logout,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
 
-  const value = {
-    user,
-    login,
-    signup,
-    logout,
-    isAuthenticated,
-    isAdmin,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+// Custom hook to use auth context
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 };

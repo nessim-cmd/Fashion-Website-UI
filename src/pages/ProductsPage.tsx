@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import React from "react";
 
 const ProductsPage = () => {
   const location = useLocation();

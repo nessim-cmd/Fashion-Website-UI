@@ -24,6 +24,7 @@ import { products } from "@/lib/data";
 import { Eye, MoreHorizontal, Edit, Package, Users, ShoppingBag, DollarSign, TrendingUp, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Product } from "@/lib/types";
+import React from "react";
 
 // Mock recent orders data
 const recentOrders = [
