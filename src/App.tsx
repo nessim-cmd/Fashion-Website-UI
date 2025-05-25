@@ -68,7 +68,7 @@ const App = () => (
 
                     <Route path="/admin/banners" element={<BannersPage />} />
 
-                    <Route path="/admin/specialoffers" element={<SpecialOffersPage />} />
+                    <Route path="/admin/special-offers" element={<SpecialOffersPage />} />
 
                     <Route path="/admin/products" element={<ProductsAdminPage />} />
                     <Route path="/admin/products/new" element={<ProductFormPage />}/>

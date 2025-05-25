@@ -73,7 +73,7 @@ const Index = () => {
 
       try {
         setLoading(prev => ({ ...prev, offers: true }));
-        const offersRes = await apiClient.get<SpecialOffer[]>("/specialOffers"); // Assuming backend returns SpecialOffer[]
+        const offersRes = await apiClient.get<SpecialOffer[]>("/special-offers"); // Assuming backend returns SpecialOffer[]
         setSpecialOffers(offersRes.data.filter(o => o.isActive)); // Filter active offers
       } catch (error) {
         console.error("Failed to fetch special offers:", error);

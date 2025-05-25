@@ -44,16 +44,12 @@ const Login = () => {
     setError("");
 
     try {
-      await login(data.email, data.password);
+      // Call login and get the user object
+      const loggedInUser = await login(data.email, data.password);
+      
       // Check if user is admin and redirect accordingly
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        const user = JSON.parse(storedUser);
-        if (user.isAdmin) {
-          navigate("/admin");
-        } else {
-          navigate("/");
-        }
+      if (loggedInUser?.isAdmin) {
+        navigate("/admin");
       } else {
         navigate("/");
       }

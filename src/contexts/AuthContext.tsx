@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
+// Removed useNavigate import
 import axios from 'axios';
 import { User } from "@/lib/types";
 import { toast } from "@/components/ui/sonner";
@@ -30,7 +31,7 @@ apiClient.interceptors.request.use((config) => {
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>; // Return User on success
   signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -52,8 +53,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children 
 }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('authToken'));
+  const [token, setToken] = useState<string | null>(localStorage.getItem("authToken"));
   const [isLoading, setIsLoading] = useState<boolean>(true); // Start loading initially
+  // Removed useNavigate initialization
 
   const fetchCurrentUser = useCallback(async (currentToken: string) => {
     if (!currentToken) {
@@ -81,31 +83,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('authToken');
+    const storedToken = localStorage.getItem("authToken");
     if (storedToken) {
-        setToken(storedToken);
-        fetchCurrentUser(storedToken);
+      setToken(storedToken);
+      // Always attempt to fetch the user from the backend if a token exists
+      fetchCurrentUser(storedToken);
     } else {
-        // Also try to load user from local storage if no token (might be from previous mock setup)
-        const storedUser = localStorage.getItem("user");
-        if (storedUser) {
-          try {
-            const parsedUser = JSON.parse(storedUser);
-            // If it looks like a mock user (no proper ID or structure), clear it
-            if (!parsedUser.id || typeof parsedUser.isAdmin === 'undefined') {
-                localStorage.removeItem("user");
-            } else {
-                 // This case shouldn't ideally happen with token auth, but handle defensively
-                 // Maybe fetch user data if token is missing but user data exists?
-                 // For now, just clear if no token.
-                 localStorage.removeItem("user");
-            }
-          } catch (error) {
-            console.error("Failed to parse stored user:", error);
-            localStorage.removeItem("user");
-          }
-        }
-        setIsLoading(false); // No token, not loading
+      // No token found, ensure user state is cleared and set loading to false
+      setUser(null);
+      setToken(null);
+      localStorage.removeItem("user"); // Clear any potentially stale user data
+      setIsLoading(false);
     }
   }, [fetchCurrentUser]);
 
@@ -118,10 +106,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setToken(newToken);
       setUser(loggedInUser);
       localStorage.setItem('authToken', newToken);
-      localStorage.setItem('user', JSON.stringify(loggedInUser));
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+      localStorage.setItem("user", JSON.stringify(loggedInUser));
+      apiClient.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
 
       toast.success(`Welcome back, ${loggedInUser.name}!`);
+      // Navigation logic moved to Login component
+      return loggedInUser; // Return the user object on success
     } catch (error: any) {
       console.error("Login failed:", error);
       const message = error.response?.data?.message || error.message || "Login failed. Please check your credentials.";

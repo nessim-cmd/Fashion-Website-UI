@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useLocation } from "react-router-dom";
-// Remove static data imports
-// import { products, categories } from "@/lib/data"; 
 import { Product, Category, Subcategory, SubSubcategory } from "@/lib/types";
 import ProductCard from "@/components/ProductCard";
 import { Input } from "@/components/ui/input";
@@ -25,6 +23,15 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { apiClient } from "@/contexts/AuthContext"; // Import API client
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+// Define the expected API response structure for products
+interface ProductsApiResponse {
+  products: Product[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
 
 const ProductsPage = () => {
   const location = useLocation();
@@ -56,15 +63,36 @@ const ProductsPage = () => {
     setError(null);
     try {
       const [productsRes, categoriesRes] = await Promise.all([
-        apiClient.get<Product[]>("/products"), // Fetch all products
-        apiClient.get<Category[]>("/categories") // Fetch all categories
+        apiClient.get<ProductsApiResponse>("/products"), // Expect the object structure
+        apiClient.get<Category[]>("/categories")
       ]);
-      setAllProducts(productsRes.data);
-      setAllCategories(categoriesRes.data);
-      setFilteredProducts(productsRes.data); // Initialize filtered products
+      
+      // Validate and extract the products array
+      if (productsRes.data && Array.isArray(productsRes.data.products)) {
+        setAllProducts(productsRes.data.products);
+        setFilteredProducts(productsRes.data.products); // Initialize filtered products
+      } else {
+        console.error("Invalid products data received:", productsRes.data);
+        setAllProducts([]);
+        setFilteredProducts([]);
+        setError("Received invalid product data format.");
+      }
+
+      // Validate and set categories
+      if (categoriesRes.data && Array.isArray(categoriesRes.data)) {
+        setAllCategories(categoriesRes.data);
+      } else {
+        console.error("Invalid categories data received:", categoriesRes.data);
+        setAllCategories([]);
+        // Optionally set an error if categories are crucial
+      }
+
     } catch (err: any) {
       console.error("Failed to fetch products or categories:", err);
       setError(err.response?.data?.message || err.message || "Failed to load data. Please try again later.");
+      setAllProducts([]); // Clear data on error
+      setFilteredProducts([]);
+      setAllCategories([]);
     } finally {
       setIsLoading(false);
     }
@@ -90,8 +118,8 @@ const ProductsPage = () => {
 
   // Apply filters whenever dependencies change
   useEffect(() => {
-    // Don't filter until initial data is loaded
-    if (isLoading) return;
+    // Don't filter until initial data is loaded and valid
+    if (isLoading || !Array.isArray(allProducts)) return;
 
     let filtered = [...allProducts];
 
@@ -129,7 +157,6 @@ const ProductsPage = () => {
 
     // On sale filter
     if (onSaleOnly) {
-      // Ensure salePrice is compared correctly (not null/undefined and less than price)
       filtered = filtered.filter((product) => 
         product.salePrice !== null && 
         product.salePrice !== undefined && 
@@ -154,7 +181,6 @@ const ProductsPage = () => {
         });
         break;
       case "newest":
-        // Sort by createdAt if available, otherwise fallback (e.g., ID)
         filtered.sort((a, b) => 
           (b.createdAt && a.createdAt) 
             ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() 
@@ -162,12 +188,10 @@ const ProductsPage = () => {
         );
         break;
       case "rating":
-         // Sort by rating if available, otherwise fallback
         filtered.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
         break;
       case "featured":
       default:
-        // Sort by featured status
         filtered.sort((a, b) => (a.featured === b.featured ? 0 : a.featured ? -1 : 1));
         break;
     }
@@ -194,9 +218,8 @@ const ProductsPage = () => {
       if (category) newActiveFilters.push(`Category: ${category.name}`);
     }
     
-    // Adjust max price based on actual data if needed, or keep fixed
     const maxPriceInData = Math.max(...allProducts.map(p => p.salePrice ?? p.price), 0);
-    if (priceRange[0] > 0 || priceRange[1] < 2000) { // Keep 2000 or use maxPriceInData?
+    if (priceRange[0] > 0 || priceRange[1] < 2000) { 
       newActiveFilters.push(`Price: $${priceRange[0]} - $${priceRange[1]}`);
     }
     if (inStockOnly) newActiveFilters.push("In Stock Only");
@@ -215,7 +238,7 @@ const ProductsPage = () => {
     sortBy, 
     allProducts, 
     allCategories, 
-    isLoading // Depend on isLoading to prevent filtering before load
+    isLoading
   ]);
 
   const clearFilters = () => {
@@ -223,10 +246,9 @@ const ProductsPage = () => {
     setCategoryId(null);
     setSubcategoryId(null);
     setSubSubcategoryId(null);
-    setPriceRange([0, 2000]); // Reset to default range
+    setPriceRange([0, 2000]);
     setInStockOnly(false);
     setOnSaleOnly(false);
-    // Optionally reset sort? setSortBy("featured");
   };
 
   const removeFilter = (filter: string) => {
@@ -254,7 +276,7 @@ const ProductsPage = () => {
     }
   };
 
-  // Function to render hierarchical category filters (using fetched categories)
+  // Function to render hierarchical category filters
   const renderCategoryFilters = () => (
     <div className="space-y-4">
       <h3 className="text-lg font-medium">Categories</h3>
@@ -262,17 +284,17 @@ const ProductsPage = () => {
         value={categoryId || "all"}
         onValueChange={(value) => {
           setCategoryId(value === "all" ? null : value);
-          setSubcategoryId(null); // Reset lower levels
+          setSubcategoryId(null);
           setSubSubcategoryId(null);
         }}
-        disabled={isLoading} // Disable while loading
+        disabled={isLoading || !Array.isArray(allCategories) || allCategories.length === 0}
       >
         <SelectTrigger>
           <SelectValue placeholder="All Categories" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Categories</SelectItem>
-          {allCategories.map((category) => (
+          {Array.isArray(allCategories) && allCategories.map((category) => (
             <SelectItem key={category.id} value={category.id}>
               {category.name}
             </SelectItem>
@@ -287,7 +309,7 @@ const ProductsPage = () => {
             value={subcategoryId || "all"}
             onValueChange={(value) => {
               setSubcategoryId(value === "all" ? null : value);
-              setSubSubcategoryId(null); // Reset lower level
+              setSubSubcategoryId(null);
             }}
             disabled={isLoading}
           >
@@ -357,7 +379,7 @@ const ProductsPage = () => {
         <h3 className="text-lg font-medium mb-3">Price Range</h3>
         <Slider 
           min={0} 
-          max={2000} // Consider making max dynamic based on fetched data
+          max={2000}
           step={10}
           value={priceRange}
           onValueChange={(value: [number, number]) => setPriceRange(value)}
@@ -416,15 +438,15 @@ const ProductsPage = () => {
 
   // Function to render products based on view mode
   const renderProducts = () => {
+    // Handle loading state
     if (isLoading) {
-      // Show skeletons based on view mode
       if (viewMode === "grid") {
         return (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
             {renderSkeletons(8)} 
           </div>
         );
-      } else { // List view skeletons
+      } else {
         return (
           <div className="flex flex-col space-y-4">
             {renderSkeletons(4)} 
@@ -433,29 +455,47 @@ const ProductsPage = () => {
       }
     }
 
+    // Handle error state after loading
     if (error) {
       return (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>Error Loading Products</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       );
     }
 
+    // Defensive check: Ensure filteredProducts is an array before mapping
+    if (!Array.isArray(filteredProducts)) {
+      console.error("filteredProducts is not an array:", filteredProducts);
+      return (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Data Error</AlertTitle>
+          <AlertDescription>
+            Could not display products. Received unexpected data format.
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    // Handle empty state after loading and filtering
     if (filteredProducts.length === 0) {
       return (
         <div className="text-center py-12">
           <h3 className="text-xl font-medium mb-2">No products found</h3>
           <p className="text-gray-500 mb-6">
-            Try adjusting your search or filter criteria, or check back later.
+            Try adjusting your search or filter criteria.
           </p>
-          <Button onClick={clearFilters}>Clear Filters</Button>
+          <Button variant="link" onClick={clearFilters}>
+            Clear Filters
+          </Button>
         </div>
       );
     }
 
-    // Render actual products
+    // Render products grid or list
     if (viewMode === "grid") {
       return (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
@@ -475,11 +515,12 @@ const ProductsPage = () => {
     }
   };
 
+  // Main component return
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Fashion Collection</h1>
 
-      {/* Active filters - only show if not loading and filters exist */}
+      {/* Active filters display */}
       {!isLoading && activeFilters.length > 0 && (
         <div className="mb-6">
           <div className="flex flex-wrap gap-2 items-center">
@@ -503,22 +544,23 @@ const ProductsPage = () => {
               variant="ghost" 
               size="sm" 
               onClick={clearFilters}
-              className="h-7 text-xs"
+              className="text-sm text-primary hover:underline"
             >
-              Clear all
+              Clear All
             </Button>
           </div>
         </div>
       )}
 
+      {/* Main layout: Filters sidebar + Products area */}
       <div className="flex flex-col lg:flex-row gap-8">
-        {/* Filters - Desktop & Mobile Sheet Trigger */}
-        <div className="w-full lg:w-64">
+        {/* Filters sidebar / mobile sheet */}
+        <div className="w-full lg:w-1/4 xl:w-1/5">
           {isMobile ? (
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="outline" className="w-full mb-4 lg:hidden">
-                  <SlidersHorizontal className="mr-2 h-4 w-4" /> Filters
+                <Button variant="outline" className="w-full justify-start mb-4">
+                  <Filter className="mr-2 h-4 w-4" /> Filters
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-[300px] sm:w-[400px] overflow-y-auto">
@@ -545,7 +587,7 @@ const ProductsPage = () => {
               {isLoading ? (
                 <Skeleton className="h-4 w-24" />
               ) : (
-                <span>Showing {filteredProducts.length} of {allProducts.length} products</span>
+                <span>Showing {Array.isArray(filteredProducts) ? filteredProducts.length : 0} of {Array.isArray(allProducts) ? allProducts.length : 0} products</span>
               )}
             </div>
 
@@ -587,3 +629,4 @@ const ProductsPage = () => {
 };
 
 export default ProductsPage;
+
