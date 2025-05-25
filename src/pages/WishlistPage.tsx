@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { Button } from "@/components/ui/button";
@@ -6,39 +6,32 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Trash2, ShoppingCart, Heart } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "@/components/ui/sonner";
-import { api } from "@/utils/api";
-import React from "react";
+import { toast } from "@/components/ui/use-toast";
 
 const WishlistPage = () => {
   const { items, removeItem, clearWishlist } = useWishlist();
   const { addItem } = useCart();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
-  // Fetch wishlist items from API when component mounts
-  useEffect(() => {
-    const fetchWishlistItems = async () => {
-      try {
-        setLoading(true);
-        await api.getWishlist(); // This will update the wishlist context
-      } catch (error) {
-        console.error("Failed to fetch wishlist:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const handleAddToCart = (productId: string) => {
+    const product = items.find((item) => item.id === productId);
+    if (product) {
+      addItem(product, 1);
+      toast({
+        title: "Added to cart",
+        description: `${product.name} has been added to your cart.`,
+      });
+    }
+  };
 
-    fetchWishlistItems();
-  }, []);
-
-  function handleRemoveFromWishlist(id: string): void {
-    throw new Error("Function not implemented.");
-  }
-
-  function handleAddToCart(id: string): void {
-    throw new Error("Function not implemented.");
-  }
+  const handleRemoveFromWishlist = (productId: string) => {
+    removeItem(productId);
+    toast({
+      title: "Removed from wishlist",
+      description: "Item has been removed from your wishlist.",
+      variant: "destructive",
+    });
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">

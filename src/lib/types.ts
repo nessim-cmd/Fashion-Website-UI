@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface Category {
   id: string;
   name: string;
@@ -24,6 +25,7 @@ export interface SubSubcategory {
 }
 
 export interface Product {
+  createdAt: any;
   id: string;
   name: string;
   description: string;
@@ -54,7 +56,9 @@ export interface User {
   isAdmin: boolean;
 }
 
+// Add id field to CartItem to uniquely identify the cart item itself
 export interface CartItem {
+  id: string; // Unique identifier for the cart item entry
   productId: string;
   quantity: number;
   product: Product;

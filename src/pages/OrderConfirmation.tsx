@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Printer, ShoppingBag } from "lucide-react";
-import React from "react";
 
 const OrderConfirmation = () => {
   const { orderId } = useParams<{ orderId: string }>();

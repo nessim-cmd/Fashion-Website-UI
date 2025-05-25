@@ -1,244 +1,227 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { CartItem as FrontendCartItem, Product, ProductColor } from "@/lib/types"; // Rename to avoid conflict
 import { toast } from "@/components/ui/sonner";
-import { api } from "@/utils/api";
 import { useAuth } from "./AuthContext";
-import React from "react";
+import { apiClient } from "./AuthContext"; // Import the configured axios instance
 
-// Define types
-type Product = {
-  slug: any;
-  id: string;
-  name: string;
-  price: number;
-  salePrice?: number;
-  images: string[];
-  // Add other product properties as needed
-};
-
-type ProductColor = {
-  name: string;
-  hex: string;
-};
-
-type CartItem = {
-  id: string;
-  productId: string;
+// Define the structure of the CartItem coming from the backend
+// Adjust based on actual backend response structure if different
+interface BackendCartItem {
+  id: string; // Cart item ID from backend
   quantity: number;
-  selectedSize?: string;
-  selectedColor?: ProductColor;
-  product: Product;
-};
+  productId: string;
+  product: Product; // Assuming backend populates product details
+  // Add selectedSize and selectedColor if backend stores them per cart item
+  // selectedSize?: string;
+  // selectedColor?: ProductColor;
+}
 
-type CartContextType = {
-  items: CartItem[];
+// Define the structure for the Cart response from the backend
+interface BackendCart {
+  id: string;
+  userId: string;
+  items: BackendCartItem[];
+  // Add other cart properties if available (e.g., total)
+}
+
+interface CartContextType {
+  items: FrontendCartItem[]; // Keep using FrontendCartItem for consistency in the UI components
+  addItem: (product: Product, quantity?: number, size?: string, color?: ProductColor) => Promise<void>; // Make async
+  removeItem: (id: string) => Promise<void>; // Use id from backend, make async
+  updateQuantity: (id: string, quantity: number) => Promise<void>; // Use id, make async
+  clearCart: () => Promise<void>; // Make async
   itemCount: number;
   subtotal: number;
   hasItems: boolean;
-  addItem: (product: Product, quantity?: number, size?: string, color?: ProductColor) => Promise<void>;
-  removeItem: (itemId: string) => Promise<void>;
-  updateQuantity: (itemId: string, quantity: number) => Promise<void>;
-  clearCart: () => Promise<void>;
-};
+  isLoading: boolean;
+  fetchCart: () => Promise<void>; // Expose fetchCart
+}
 
-// Create context
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-// Provider component
-export const CartProvider = ({ children }: { children: ReactNode }) => {
-  const [items, setItems] = useState<CartItem[]>([]);
-  const { isAuthenticated } = useAuth();
+export const useCart = () => {
+  const context = useContext(CartContext);
+  if (!context) {
+    throw new Error("useCart must be used within a CartProvider");
+  }
+  return context;
+};
 
-  // Calculate derived values
+// Helper to map backend item to frontend item structure
+const mapBackendItemToFrontend = (backendItem: BackendCartItem): FrontendCartItem => {
+  return {
+    id: backendItem.id, // Store the backend cart item ID
+    productId: backendItem.productId,
+    quantity: backendItem.quantity,
+    product: backendItem.product,
+    // Map selectedSize and selectedColor if they exist on backendItem
+    // selectedSize: backendItem.selectedSize,
+    // selectedColor: backendItem.selectedColor,
+  };
+};
+
+export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ 
+  children 
+}) => {
+  const [items, setItems] = useState<FrontendCartItem[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const { isAuthenticated, user } = useAuth(); // Get auth state
+
+  const fetchCart = useCallback(async () => {
+    if (!isAuthenticated || !user) {
+      setItems([]); // Clear cart if not authenticated
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const response = await apiClient.get<BackendCart>("/cart");
+      const frontendItems = response.data.items.map(mapBackendItemToFrontend);
+      setItems(frontendItems);
+    } catch (error) {
+      console.error("Failed to fetch cart:", error);
+      // Don't show toast on initial fetch error, maybe handle silently or log
+      // toast.error("Failed to load your cart.");
+      setItems([]); // Clear items on error
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, user]);
+
+  // Fetch cart when auth state changes or component mounts
+  useEffect(() => {
+    fetchCart();
+  }, [fetchCart]);
+
+  // Remove localStorage logic
+  // useEffect(() => { ... }); 
+  // useEffect(() => { ... });
+
+  const addItem = async (product: Product, quantity = 1, size?: string, color?: ProductColor) => {
+    if (!isAuthenticated) {
+      toast.error("Please log in to add items to your cart.");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      // Backend expects productId, quantity, potentially size/color
+      const payload = { 
+        productId: product.id, 
+        quantity, 
+        // Add size and color if backend supports them
+        // size: size,
+        // color: color ? color.name : undefined // Or send the whole color object if needed
+      };
+      const response = await apiClient.post<BackendCartItem>("/cart", payload);
+      // Refetch cart to get the updated list with backend IDs
+      await fetchCart(); 
+      let itemDetails = `${product.name}`;
+      if (size) itemDetails += ` - Size: ${size}`;
+      if (color) itemDetails += ` - Color: ${color.name}`;
+      toast.success(`Added ${itemDetails} to cart`);
+
+    } catch (error: any) {
+      console.error("Failed to add item to cart:", error);
+      const message = error.response?.data?.message || "Failed to add item to cart.";
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const removeItem = async (id: string) => { // Changed cartItemId to id
+    if (!isAuthenticated) return;
+    setIsLoading(true);
+    try {
+      await apiClient.delete(`/cart/${id}`); // Use id in the URL
+      // Optimistic update or refetch
+      setItems((currentItems) => {
+        const itemToRemove = currentItems.find(item => item.id === id); // Use id for finding
+        if (itemToRemove) {
+          toast.success(`Removed ${itemToRemove.product.name} from cart`);
+        }
+        return currentItems.filter((item) => item.id !== id); // Use id for filtering
+      });
+      // Or refetch: await fetchCart();
+    } catch (error: any) {
+      console.error("Failed to remove item from cart:", error);
+      const message = error.response?.data?.message || "Failed to remove item.";
+      toast.error(message);
+      // Consider refetching on error to ensure consistency
+      await fetchCart(); 
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateQuantity = async (id: string, quantity: number) => { // Changed cartItemId to id
+    if (!isAuthenticated) return;
+    if (quantity <= 0) {
+      await removeItem(id); // Use id
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const response = await apiClient.put<BackendCartItem>(`/cart/${id}`, { quantity }); // Use id in the URL
+      // Optimistic update or refetch
+      setItems((currentItems) =>
+        currentItems.map((item) =>
+          item.id === id ? { ...item, quantity: response.data.quantity } : item // Use id for matching
+        )
+      );
+      // Or refetch: await fetchCart();
+      toast.success("Cart updated");
+    } catch (error: any) {
+      console.error("Failed to update item quantity:", error);
+      const message = error.response?.data?.message || "Failed to update quantity.";
+      toast.error(message);
+      // Consider refetching on error
+      await fetchCart();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const clearCart = async () => {
+    if (!isAuthenticated) return;
+    setIsLoading(true);
+    try {
+      await apiClient.delete("/cart");
+      setItems([]);
+      toast.success("Cart cleared");
+    } catch (error: any) {
+      console.error("Failed to clear cart:", error);
+      const message = error.response?.data?.message || "Failed to clear cart.";
+      toast.error(message);
+      // Consider refetching on error
+      await fetchCart();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const itemCount = items.reduce((total, item) => total + item.quantity, 0);
+  
   const subtotal = items.reduce(
     (total, item) => total + (item.product.salePrice || item.product.price) * item.quantity,
     0
   );
+
   const hasItems = items.length > 0;
 
-  // Load cart on initial render
-  useEffect(() => {
-    const loadCart = async () => {
-      if (isAuthenticated) {
-        try {
-          const cartData = await api.getCart();
-          setItems(cartData.items);
-        } catch (error) {
-          console.error('Failed to load cart from API:', error);
-        }
-      } else {
-        // Load from localStorage for non-authenticated users
-        try {
-          const savedCart = localStorage.getItem("cart");
-          if (savedCart) {
-            setItems(JSON.parse(savedCart));
-          }
-        } catch (error) {
-          console.error("Failed to load cart from localStorage:", error);
-        }
-      }
-    };
-    
-    loadCart();
-  }, [isAuthenticated]);
-
-  // Save cart to localStorage (for non-authenticated users)
-  useEffect(() => {
-    if (!isAuthenticated && items.length > 0) {
-      localStorage.setItem("cart", JSON.stringify(items));
-    }
-  }, [items, isAuthenticated]);
-
-  // Add item to cart
-  const addItem = async (product: Product, quantity = 1, size?: string, color?: ProductColor) => {
-    if (isAuthenticated) {
-      try {
-        await api.addToCart({
-          productId: product.id,
-          quantity,
-          selectedSize: size,
-          selectedColor: color
-        });
-        
-        // Refresh cart
-        const cartData = await api.getCart();
-        setItems(cartData.items);
-        
-        let itemDetails = `${product.name}`;
-        if (size) itemDetails += ` - Size: ${size}`;
-        if (color) itemDetails += ` - Color: ${color.name}`;
-        
-        toast.success(`Added ${itemDetails} to cart`);
-      } catch (error) {
-        console.error('Failed to add item to cart:', error);
-        toast.error('Failed to add item to cart');
-      }
-    } else {
-      // For non-authenticated users, handle cart locally
-      const existingItemIndex = items.findIndex(
-        (item) => 
-          item.productId === product.id && 
-          item.selectedSize === size && 
-          JSON.stringify(item.selectedColor) === JSON.stringify(color)
-      );
-
-      if (existingItemIndex !== -1) {
-        // Update quantity if item exists
-        const updatedItems = [...items];
-        updatedItems[existingItemIndex].quantity += quantity;
-        setItems(updatedItems);
-      } else {
-        // Add new item
-        const newItem = {
-          id: `local-${Date.now()}`,
-          productId: product.id,
-          quantity,
-          selectedSize: size,
-          selectedColor: color,
-          product
-        };
-        setItems([...items, newItem]);
-      }
-
-      let itemDetails = `${product.name}`;
-      if (size) itemDetails += ` - Size: ${size}`;
-      if (color) itemDetails += ` - Color: ${color.name}`;
-      
-      toast.success(`Added ${itemDetails} to cart`);
-    }
+  const value = {
+    items,
+    addItem,
+    removeItem,
+    updateQuantity,
+    clearCart,
+    itemCount,
+    subtotal,
+    hasItems,
+    isLoading,
+    fetchCart, // Expose fetchCart
   };
 
-  // Remove item from cart
-  const removeItem = async (itemId: string) => {
-    if (isAuthenticated) {
-      try {
-        await api.removeFromCart(itemId);
-        
-        // Refresh cart
-        const cartData = await api.getCart();
-        setItems(cartData.items);
-        
-        toast.success('Item removed from cart');
-      } catch (error) {
-        console.error('Failed to remove item from cart:', error);
-        toast.error('Failed to remove item from cart');
-      }
-    } else {
-      // For non-authenticated users
-      setItems(items.filter((item) => item.id !== itemId));
-      toast.success('Item removed from cart');
-    }
-  };
-
-  // Update item quantity
-  const updateQuantity = async (itemId: string, quantity: number) => {
-    if (quantity <= 0) {
-      return removeItem(itemId);
-    }
-
-    if (isAuthenticated) {
-      try {
-        await api.updateCartItem(itemId, { quantity });
-        
-        // Refresh cart
-        const cartData = await api.getCart();
-        setItems(cartData.items);
-      } catch (error) {
-        console.error('Failed to update cart item:', error);
-        toast.error('Failed to update cart item');
-      }
-    } else {
-      // For non-authenticated users
-      const updatedItems = items.map((item) =>
-        item.id === itemId ? { ...item, quantity } : item
-      );
-      setItems(updatedItems);
-    }
-  };
-
-  // Clear cart
-  const clearCart = async () => {
-    if (isAuthenticated) {
-      try {
-        await api.clearCart();
-        setItems([]);
-        toast.success('Cart cleared');
-      } catch (error) {
-        console.error('Failed to clear cart:', error);
-        toast.error('Failed to clear cart');
-      }
-    } else {
-      // For non-authenticated users
-      setItems([]);
-      localStorage.removeItem("cart");
-      toast.success('Cart cleared');
-    }
-  };
-
-  return (
-    <CartContext.Provider
-      value={{
-        items,
-        itemCount,
-        subtotal,
-        hasItems,
-        addItem,
-        removeItem,
-        updateQuantity,
-        clearCart,
-      }}
-    >
-      {children}
-    </CartContext.Provider>
-  );
-};
-
-// Custom hook to use cart context
-export const useCart = () => {
-  const context = useContext(CartContext);
-  if (context === undefined) {
-    throw new Error("useCart must be used within a CartProvider");
-  }
-  return context;
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };

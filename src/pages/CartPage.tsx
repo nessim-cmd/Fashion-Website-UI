@@ -9,7 +9,6 @@ import { MinusCircle, PlusCircle, ShoppingBag, Trash2, ArrowRight } from "lucide
 import { toast } from "@/components/ui/sonner";
 import { coupons } from "@/lib/data";
 import { Coupon } from "@/lib/types";
-import React from "react";
 
 const CartPage = () => {
   const { items, removeItem, updateQuantity, clearCart, subtotal } = useCart();

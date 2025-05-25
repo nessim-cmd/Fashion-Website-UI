@@ -33,7 +33,6 @@ import {
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Package, Truck, CheckCircle, AlertCircle, Clock, ArrowRight, ShoppingBag } from "lucide-react";
-import React from "react";
 
 // Mock orders data for the current user
 const mockOrders = [

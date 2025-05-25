@@ -15,7 +15,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useAuth } from "@/contexts/AuthContext";
-import React from "react";
 
 const formSchema = z.object({
   email: z.string().email({
