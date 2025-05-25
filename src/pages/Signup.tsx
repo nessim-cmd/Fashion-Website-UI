@@ -60,7 +60,7 @@ const Signup = () => {
 
     try {
       await signup(data.name, data.email, data.password);
-      navigate("/");
+      navigate("/login");
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
